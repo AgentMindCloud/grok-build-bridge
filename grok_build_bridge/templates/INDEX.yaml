@@ -1,0 +1,84 @@
+# Machine-readable registry of bundled templates. The `grok-build-bridge
+# templates` and `grok-build-bridge init` subcommands read this file.
+#
+# Adding a template:
+#   1. Drop the bridge YAML into grok_build_bridge/templates/<slug>.yaml.
+#   2. Append an entry below with name, slug, description, required_env,
+#      estimated_tokens, categories, and a `files:` list mapping each
+#      source file under this directory to its destination path under
+#      the user's --out dir.
+#
+# Field reference:
+#   - name:              human-friendly label shown in the templates table.
+#   - slug:              argument to `init`; must match an on-disk YAML name.
+#   - description:       one-line summary (≤280 chars).
+#   - required_env:      list of env var names the generated agent reads.
+#   - estimated_tokens:  rough total tokens per bridge run (build + audit).
+#   - categories:        free-form tags, used by future filtering UI.
+#   - files:             [{src, dst}] copied by `init`. `src` is relative
+#                        to this templates dir; `dst` is relative to --out.
+
+version: "1.0"
+
+templates:
+  - name: hello-bot
+    slug: hello-bot
+    description: The smallest local-source agent. Greets stdout and exits — ideal as a first bridge smoke test.
+    required_env: []
+    estimated_tokens: 0
+    categories: [quickstart, smoke-test, local-source]
+    files:
+      - src: hello-bot/bridge.yaml
+        dst: bridge.yaml
+      - src: hello-bot/hello-bot/main.py
+        dst: hello-bot/main.py
+
+  - name: x-trend-analyzer
+    slug: x-trend-analyzer
+    description: Every 6 hours, publish a single X thread summarising the top 5 technical trends with primary-source citations.
+    required_env: [XAI_API_KEY, X_BEARER_TOKEN]
+    estimated_tokens: 18000
+    categories: [x-deploy, research, scheduled, tools]
+    files:
+      - src: x-trend-analyzer.yaml
+        dst: bridge.yaml
+
+  - name: truthseeker-daily
+    slug: truthseeker-daily
+    description: Daily fact-check of the 3 most-discussed X threads in a target domain, with primary-source citations and a calibration note.
+    required_env: [XAI_API_KEY, X_BEARER_TOKEN]
+    estimated_tokens: 22000
+    categories: [x-deploy, fact-check, scheduled, multi-step]
+    files:
+      - src: truthseeker-daily.yaml
+        dst: bridge.yaml
+
+  - name: code-explainer-bot
+    slug: code-explainer-bot
+    description: Point at a Python repo via $TARGET_REPO. The agent reads it and posts a plain-English X thread explaining what the codebase does.
+    required_env: [TARGET_REPO, XAI_API_KEY, X_BEARER_TOKEN]
+    estimated_tokens: 12000
+    categories: [x-deploy, local-source, dev-tools]
+    files:
+      - src: code-explainer-bot.yaml
+        dst: bridge.yaml
+
+  - name: grok-build-coding-agent
+    slug: grok-build-coding-agent
+    description: Build a tiny TypeScript CLI via the grok-build-cli fallback chain. deploy target is local; use this to validate a non-X deploy.
+    required_env: [XAI_API_KEY]
+    estimated_tokens: 16000
+    categories: [local-target, typescript, cli, fallback-chain]
+    files:
+      - src: grok-build-coding-agent.yaml
+        dst: bridge.yaml
+
+  - name: research-thread-weekly
+    slug: research-thread-weekly
+    description: Weekly deep-research agent. 5 parallel x_search queries plus web_search verification produce one authoritative X thread.
+    required_env: [XAI_API_KEY, X_BEARER_TOKEN]
+    estimated_tokens: 30000
+    categories: [x-deploy, research, scheduled, high-reasoning]
+    files:
+      - src: research-thread-weekly.yaml
+        dst: bridge.yaml

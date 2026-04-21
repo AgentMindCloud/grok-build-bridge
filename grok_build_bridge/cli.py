@@ -294,29 +294,57 @@ def templates_cmd() -> None:
     table.add_column("name", style="brand.primary", no_wrap=True)
     table.add_column("description")
     table.add_column("required env", style="brand.muted")
+    table.add_column("est. tokens", style="brand.muted", justify="right")
+    table.add_column("categories", style="brand.muted")
     for entry in entries:
         env = ", ".join(entry.get("required_env") or []) or "—"
+        cats = ", ".join(entry.get("categories") or []) or "—"
+        tokens = entry.get("estimated_tokens")
+        tokens_str = f"{tokens:,}" if isinstance(tokens, int) else "—"
         table.add_row(
             str(entry.get("name", "")),
             str(entry.get("description", "")),
             env,
+            tokens_str,
+            cats,
         )
     console.print(table)
 
 
 def _discover_templates() -> Iterable[dict[str, Any]]:
-    """Yield parsed ``template.yaml`` manifests from the bundled templates."""
+    """Yield template entries from the bundled ``INDEX.yaml`` registry."""
+    return _load_template_index()
+
+
+def _load_template_index() -> list[dict[str, Any]]:
+    """Parse ``grok_build_bridge/templates/INDEX.yaml`` into an entry list.
+
+    Returns an empty list if the registry is missing or unreadable — the
+    CLI degrades to "no templates" rather than crashing on a packaging bug.
+    """
     root = resources.files("grok_build_bridge.templates")
-    for entry in sorted(root.iterdir(), key=lambda p: p.name):
-        if not entry.is_dir():
-            continue
-        manifest = entry / "template.yaml"
-        if not manifest.is_file():
-            continue
-        data = yaml.safe_load(manifest.read_text(encoding="utf-8")) or {}
-        if isinstance(data, dict):
-            data.setdefault("name", entry.name)
-            yield data
+    index_path = root / "INDEX.yaml"
+    if not index_path.is_file():
+        return []
+    data = yaml.safe_load(index_path.read_text(encoding="utf-8")) or {}
+    if not isinstance(data, dict):
+        return []
+    raw_entries = data.get("templates") or []
+    if not isinstance(raw_entries, list):
+        return []
+    entries: list[dict[str, Any]] = []
+    for entry in raw_entries:
+        if isinstance(entry, dict) and entry.get("slug"):
+            entries.append(entry)
+    return entries
+
+
+def _lookup_template(slug: str) -> dict[str, Any] | None:
+    """Return the INDEX.yaml entry whose ``slug`` matches, or ``None``."""
+    for entry in _load_template_index():
+        if entry.get("slug") == slug:
+            return entry
+    return None
 
 
 # ---------------------------------------------------------------------------
@@ -340,8 +368,8 @@ def init_cmd(
     ),
 ) -> None:
     """⚡  Copy a bundled template to ``--out`` (or the current directory)."""
-    template_root = resources.files("grok_build_bridge.templates") / template_name
-    if not template_root.is_dir():
+    entry = _lookup_template(template_name)
+    if entry is None:
         _render_error_panel(
             "📚 Template not found",
             BridgeRuntimeError(f"no bundled template named {template_name!r}"),
@@ -351,14 +379,33 @@ def init_cmd(
         )
         raise typer.Exit(code=_EXIT_CONFIG)
 
+    file_specs = entry.get("files") or []
+    if not isinstance(file_specs, list) or not file_specs:
+        _render_error_panel(
+            "📚 Template is empty",
+            BridgeRuntimeError(
+                f"template {template_name!r} has no files declared in INDEX.yaml"
+            ),
+            ["Open INDEX.yaml in the templates dir and add a files: list."],
+        )
+        raise typer.Exit(code=_EXIT_CONFIG)
+
+    templates_root = resources.files("grok_build_bridge.templates")
     out.mkdir(parents=True, exist_ok=True)
     copied: list[Path] = []
 
-    for src in _walk_template(template_root):
-        rel = src.relative_to(template_root)
-        if rel.name == "template.yaml":
+    for spec in file_specs:
+        src_rel = spec.get("src") if isinstance(spec, dict) else None
+        dst_rel = spec.get("dst") if isinstance(spec, dict) else None
+        if not src_rel or not dst_rel:
             continue
-        dst = out / rel
+        src_res = templates_root / src_rel
+        dst = out / dst_rel
+        if not src_res.is_file():
+            console.print(
+                Text(f"skipped (missing source): {src_rel}", style="brand.warn")
+            )
+            continue
         if dst.exists() and not force:
             if not typer.confirm(
                 f"{dst} already exists. Overwrite?",
@@ -367,7 +414,8 @@ def init_cmd(
                 console.print(Text(f"skipped {dst}", style="brand.muted"))
                 continue
         dst.parent.mkdir(parents=True, exist_ok=True)
-        shutil.copy2(src, dst)
+        with resources.as_file(src_res) as src_path:
+            shutil.copy2(src_path, dst)
         copied.append(dst)
 
     body = Text()
@@ -388,16 +436,6 @@ def init_cmd(
             border_style="brand.success",
         )
     )
-
-
-def _walk_template(root: Any) -> Iterable[Path]:
-    """Yield every file under a template resource directory as real Paths."""
-    # resources.files returns Traversable; we materialise to Path via
-    # as_file for the duration of iteration.
-    with resources.as_file(root) as root_path:
-        for path in Path(root_path).rglob("*"):
-            if path.is_file():
-                yield path
 
 
 # ---------------------------------------------------------------------------

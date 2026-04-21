@@ -1,0 +1,56 @@
+# ============================================================================
+# Template: code-explainer-bot
+# Purpose:  Point this at a Python repo via $TARGET_REPO. The bridge runs its
+#           safety scan on the agent code, then the agent walks the repo, picks
+#           the most illustrative file, and publishes a plain-English X thread
+#           explaining what the codebase *does* (not what each function does).
+#
+# Source:   `local`. You ship the agent code yourself — the template provides
+#           the bridge config and a scaffold `main.py` you can drop next to
+#           this YAML (see `init code-explainer-bot`). The `local` source
+#           means the bridge never has to call Grok to *build* the agent; it
+#           only audits the code you already have.
+#
+# Required env vars:
+#   TARGET_REPO       — absolute path to the Python repo to be explained.
+#   XAI_API_KEY       — xAI key used by the agent at runtime (NOT for build).
+#   X_BEARER_TOKEN    — X API bearer token used to publish the thread.
+#
+# Estimated cost per run:
+#   ~$0.10 per invocation, dominated by the agent's own single_call to Grok
+#   during thread drafting. No build-time Grok calls (source is local).
+#
+# Expected output:
+#   A ≤7-post thread, each ≤280 chars, describing the repo's purpose,
+#   runtime shape, key abstraction, and what to read first.
+# ============================================================================
+
+version: "1.0"
+name: code-explainer-bot
+description: Point at a Python repo via $TARGET_REPO. The agent reads it and posts a plain-English X thread explaining what the codebase does.
+
+build:
+  # `source: local` tells the bridge to SKIP code generation and use a file
+  # you have already placed at generated/code-explainer-bot/main.py (or
+  # next to this YAML). Run `grok-build-bridge init code-explainer-bot`
+  # to drop a starter main.py in your project.
+  source: local
+  language: python
+  entrypoint: main.py
+
+deploy:
+  target: x
+  runtime: grok-install
+  post_to_x: true
+  # Manual trigger — no schedule. Run whenever you add a repo worth explaining.
+  safety_scan: true
+
+agent:
+  model: grok-4.20-0309
+  reasoning_effort: medium
+  personality: Plain-English, no jargon. Treats the reader as a smart beginner. Names files and directories exactly.
+
+safety:
+  audit_before_post: true
+  max_tokens_per_run: 12000
+  lucas_veto_enabled: false

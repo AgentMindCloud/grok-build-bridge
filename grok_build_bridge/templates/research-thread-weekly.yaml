@@ -1,0 +1,106 @@
+# ============================================================================
+# Template: research-thread-weekly
+# Purpose:  Once a week, run a deep research pass: 5 parallel x_search queries
+#           probe adjacent framings of the same question, merge the unique
+#           findings, verify each with a web_search, and ship ONE
+#           authoritative thread. High reasoning_effort — budget accordingly.
+#
+# Required env vars:
+#   XAI_API_KEY       — xAI key used for streaming the build + all tools.
+#   X_BEARER_TOKEN    — X API bearer token used by the generated agent.
+#
+# Estimated cost per run:
+#   ~$0.48  (≈18K input + ≈30K output tokens at reasoning_effort: high).
+#   At 1 run/week → ≈$2.10/month. Cheapest per insight in the template pack.
+#
+# Expected output:
+#   A Python file that, once a week, produces one ≤10-post thread: a
+#   short TL;DR opener, 5-7 evidence posts (each citing a primary source),
+#   and a closing post that lists the 5 search queries used so the thread
+#   is fully reproducible.
+# ============================================================================
+
+version: "1.0"
+name: research-thread-weekly
+description: Weekly deep-research agent. 5 parallel x_search queries plus web_search verification produce one authoritative X thread.
+
+build:
+  source: grok
+  language: python
+  entrypoint: main.py
+  required_tools:
+    - x_search
+    - web_search
+  grok_prompt: |
+    You are generating ONE Python 3.11 file, `main.py`, that implements a
+    weekly deep-research X bot. Output one fenced ```python code block and
+    nothing else.
+
+    Hard constraints:
+      - Use the xai-sdk Python client for model calls.
+      - Use httpx with explicit timeout=15.0 for every network call.
+      - NEVER use shell=True, eval(), exec(), os.system(), or pickle.
+      - Read XAI_API_KEY and X_BEARER_TOKEN from os.environ. If either is
+        missing, log to stderr and sys.exit(2).
+      - Use tenacity for retries (3 attempts, exp backoff min=2, max=16)
+        on every tool and every X API call.
+      - Run the 5 x_search queries CONCURRENTLY using asyncio.gather.
+
+    Behaviour — implement as the following functions:
+
+      1. `plan_queries(topic: str) -> list[str]`
+         Ask Grok to propose exactly 5 *adjacent* search queries: each
+         reframes the same research question from a different angle
+         (technical / economic / historical / counterargument / meta).
+         Return the 5 query strings. No duplicates.
+
+      2. `search_all(queries: list[str]) -> list[Finding]`
+         Run the 5 x_search calls in parallel with asyncio.gather.
+         Deduplicate posts across results (same post id). Cluster the
+         unique posts by semantic similarity (ask Grok) and keep the 7
+         clusters with the strongest cumulative engagement. Each
+         `Finding` = {cluster_id, topic_sentence, exemplar_post_id}.
+
+      3. `verify(finding: Finding) -> VerifiedFinding`
+         For each finding, call web_search for a primary source
+         (.edu / .gov / arxiv.org / official org blog). Capture
+         {title, url, published_date}. Reject findings where no primary
+         source is available within 2 search rounds; log to stderr.
+
+      4. `compose(findings: list[VerifiedFinding]) -> list[str]`
+         Draft a 7-10 post thread:
+            post 0: "Weekly research: {topic} — {today_iso}" + TL;DR
+                    in ≤200 chars.
+            posts 1..N: one `VerifiedFinding` each. Format:
+                "{topic_sentence}
+                 source: {url}
+                 ({published_date})"
+            post N+1: "Queries used this week:" + 5-line list.
+         Enforce len(post) ≤ 280 before every API call; raise ValueError
+         if violated.
+
+      5. `publish(thread: list[str])` — post sequentially with 2s sleeps.
+
+    Module-level `TOPIC = os.environ.get("BRIDGE_RESEARCH_TOPIC",
+    "progress in reinforcement learning from human feedback")`.
+
+    Top-level `if __name__ == "__main__": asyncio.run(main())`. Print
+    {topic, posted_ids, queries, findings_verified, findings_rejected}
+    as JSON to stdout.
+
+deploy:
+  target: x
+  runtime: grok-install
+  post_to_x: true
+  schedule: "0 13 * * 1"
+  safety_scan: true
+
+agent:
+  model: grok-4.20-0309
+  reasoning_effort: high
+  personality: Rigorous, cites sources before claims, acknowledges open questions rather than glossing over them.
+
+safety:
+  audit_before_post: true
+  max_tokens_per_run: 30000
+  lucas_veto_enabled: false

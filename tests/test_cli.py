@@ -175,6 +175,36 @@ def test_templates_command_lists_bundled_hello_bot() -> None:
     assert "hello-bot" in out
 
 
+def test_templates_command_lists_all_six_bundled_templates() -> None:
+    """Every INDEX.yaml slug should appear in the templates table."""
+    result = runner.invoke(app, ["templates"])
+    out = _combined_output(result)
+    assert result.exit_code == 0, out
+    for slug in [
+        "hello-bot",
+        "x-trend-analyzer",
+        "truthseeker-daily",
+        "code-explainer-bot",
+        "grok-build-coding-agent",
+        "research-thread-weekly",
+    ]:
+        assert slug in out, f"expected template {slug} in output, got: {out}"
+
+
+def test_init_for_flat_template_copies_to_bridge_yaml(tmp_path: Path) -> None:
+    """Flat-style templates (INDEX `files: [{src, dst: bridge.yaml}]`) land as bridge.yaml."""
+    out = tmp_path / "flat-template-out"
+    result = runner.invoke(
+        app, ["init", "x-trend-analyzer", "--out", str(out), "--force"]
+    )
+    assert result.exit_code == 0, _combined_output(result)
+    assert (out / "bridge.yaml").is_file()
+    # The copied file should be the x-trend-analyzer YAML.
+    copied = (out / "bridge.yaml").read_text(encoding="utf-8")
+    assert "x-trend-analyzer" in copied
+    assert "x_search" in copied
+
+
 def test_init_copies_bundled_template_into_out_dir(tmp_path: Path) -> None:
     out = tmp_path / "new-project"
     result = runner.invoke(app, ["init", "hello-bot", "--out", str(out), "--force"])

@@ -1,0 +1,87 @@
+# ============================================================================
+# Template: x-trend-analyzer
+# Purpose:  Every 6 hours, pick the 5 most-discussed technical topics on X,
+#           corroborate each with a primary-source web search, and publish a
+#           single thread summarising what matters. Not a celebrity-drama bot.
+#
+# Required env vars:
+#   XAI_API_KEY       — xAI key used to stream the build and run audits.
+#   X_BEARER_TOKEN    — X API bearer token used by the generated agent.
+#
+# Estimated cost per run:
+#   ~$0.15  (≈10K input + ≈8K output tokens on grok-4.20-0309).
+#   At 4 runs/day → ≈$18/month if run continuously.
+#
+# Expected output:
+#   A single Python file that, on each scheduled invocation, emits one X
+#   thread (opening + 5 detail posts + closing) and exits. The agent logs
+#   every x_search/web_search call to stderr for auditability.
+# ============================================================================
+
+version: "1.0"
+name: x-trend-analyzer
+description: Every 6 hours, publish a single X thread summarising the top 5 technical trends with primary-source citations.
+
+build:
+  source: grok
+  language: python
+  entrypoint: main.py
+  required_tools:
+    - x_search
+    - web_search
+  grok_prompt: |
+    You are generating ONE Python 3.11 file, `main.py`, that is the entire
+    implementation of an X bot. Output one fenced ```python code block and
+    nothing else.
+
+    Constraints:
+      - Use the xai-sdk Python client (already installed) for all model calls.
+      - Use the official X API v2 via httpx with explicit timeouts.
+      - NEVER use shell=True, eval(), exec(), or os.system().
+      - Load XAI_API_KEY and X_BEARER_TOKEN from os.environ; if either is
+        missing, log a clear error to stderr and exit with code 2.
+      - All HTTP calls pass timeout=10.0 and retry on 429/5xx with tenacity
+        (3 attempts, exponential backoff min=2, max=16).
+
+    Behaviour (the `main()` function):
+      1. Call x_search for "AI OR machine learning OR LLM lang:en -is:retweet"
+         over the last 6 hours. Ignore posts with <50 likes. From the
+         remaining set, cluster near-duplicates and keep the 5 distinct
+         threads with the highest engagement.
+      2. For each of the 5 topics, call web_search for a primary source
+         (paper, release note, or official blog). Reject tabloid-style
+         domains; prefer arxiv.org, openai.com, x.ai, deepmind.google,
+         anthropic.com, and the .edu TLD.
+      3. Draft a 7-post X thread:
+            post 0: "What actually mattered on AI X in the last 6 hours (1/7)"
+            posts 1..5: one topic each; ≤280 chars including an https://
+                        primary-source URL and one data point (metric,
+                        version, author, etc.).
+            post 6: "End of thread. See sources above. (7/7)"
+         Every post must be ≤280 characters BEFORE the X API call — enforce
+         with len(post) <= 280 and raise ValueError if violated.
+      4. Publish the thread with the X API. Sleep 2s between posts to stay
+         well below the per-user rate limit.
+      5. Print a JSON run-summary to stdout: {posted_ids:[...], topics:[...]}.
+
+    Organisation:
+      - Define a `fetch_trends()` function, a `verify_source(topic)` function,
+        a `draft_thread(topics)` function, and a `publish(thread)` function.
+      - Add a top-level `if __name__ == "__main__": sys.exit(main())`.
+
+deploy:
+  target: x
+  runtime: grok-install
+  post_to_x: true
+  schedule: "0 */6 * * *"
+  safety_scan: true
+
+agent:
+  model: grok-4.20-0309
+  reasoning_effort: medium
+  personality: Neutral, factual, citation-first. Never speculates without a primary source.
+
+safety:
+  audit_before_post: true
+  max_tokens_per_run: 18000
+  lucas_veto_enabled: false

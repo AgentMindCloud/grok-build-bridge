@@ -1,0 +1,71 @@
+# ============================================================================
+# Template: grok-build-coding-agent
+# Purpose:  Demonstrates the `grok-build-cli` source mode. The bridge first
+#           tries to shell out to the ecosystem `grok-build` CLI; when that
+#           binary is absent, it falls back to streaming the build from Grok
+#           directly. Ships as a TypeScript (Node) CLI with target=local so
+#           you can exercise the non-X deploy path.
+#
+# Required env vars:
+#   XAI_API_KEY       — xAI key used by either build path.
+#   (optional) PATH includes the `grok-build` CLI if you have the ecosystem
+#    checked out locally; the bridge auto-detects and prefers it.
+#
+# Estimated cost per run:
+#   ~$0.18  (≈6K input + ≈12K output tokens). CLI generation tends to be
+#   output-heavy because TypeScript imports + types add line count.
+#
+# Expected output:
+#   A runnable `index.ts` at generated/grok-build-coding-agent/index.ts that
+#   accepts `--count N` and prints N pseudo-random haiku to stdout. Run it
+#   locally with `ts-node index.ts --count 3` or equivalent.
+# ============================================================================
+
+version: "1.0"
+name: grok-build-coding-agent
+description: Build a tiny TypeScript CLI via the grok-build-cli fallback chain. deploy target is local; use this to validate a non-X deploy.
+
+build:
+  source: grok-build-cli
+  language: typescript
+  entrypoint: index.ts
+  grok_prompt: |
+    You are generating ONE TypeScript file, `index.ts`, that is a
+    self-contained Node.js CLI. Output one fenced ```typescript code block
+    and nothing else.
+
+    Constraints:
+      - Target Node 20+. Use only the Node standard library (no runtime
+        dependencies). Types from @types/node are allowed.
+      - Parse CLI flags manually — do NOT import a flags library.
+      - Every function has an explicit return type annotation.
+      - No shell execution, no eval(), no dynamic import of user input.
+      - Exit codes: 0 = success, 2 = bad flags, 1 = internal error.
+
+    Behaviour:
+      - Flag: `--count N` (integer, 1 ≤ N ≤ 50, default 1).
+      - On each invocation, emit N haiku to stdout, one per line triple,
+        separated by a blank line.
+      - A haiku is three lines with 5/7/5 syllable counts. Use a lookup
+        table of ≥30 nature-themed words keyed by syllable count; pick
+        words pseudo-randomly (Math.random is fine) and compose.
+      - If `--count` is outside [1, 50], print a one-line error to stderr
+        and exit 2.
+      - Add an explicit `main()` function and invoke it at module bottom
+        with `main().catch((e) => { console.error(e); process.exit(1); })`.
+
+deploy:
+  target: local
+  runtime: grok-install
+  post_to_x: false
+  safety_scan: true
+
+agent:
+  model: grok-4.20-0309
+  reasoning_effort: medium
+  personality: Terse, standards-oriented. Prefers pure functions to classes.
+
+safety:
+  audit_before_post: false
+  max_tokens_per_run: 16000
+  lucas_veto_enabled: false

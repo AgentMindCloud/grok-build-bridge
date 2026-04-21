@@ -1,0 +1,103 @@
+# ============================================================================
+# Template: truthseeker-daily
+# Purpose:  Once per day, pick the 3 most-discussed X threads in a target
+#           domain (rename this template's `name:` to the domain slug you
+#           care about — "climate", "economics", "llm-safety"), fact-check
+#           each claim via web_search against primary sources, and publish a
+#           "Truth report" thread with links and calibration notes.
+#
+# Required env vars:
+#   XAI_API_KEY       — xAI key (streams the build + powers tool calls).
+#   X_BEARER_TOKEN    — X API bearer token used by the generated agent.
+#
+# Estimated cost per run:
+#   ~$0.22  (≈12K input + ≈10K output tokens on grok-4.20-0309).
+#   At 1 run/day → ≈$6.60/month.
+#
+# Expected output:
+#   A Python file that, on each scheduled invocation, publishes one X thread
+#   of shape: opener + 3 per-claim posts (VERDICT + link + one-line notes) +
+#   closing meta post with a confidence score.
+# ============================================================================
+
+version: "1.0"
+# Rename this to your domain slug — it becomes the X handle suffix and the
+# subdirectory under generated/. Keep it lowercase-hyphens, 3-64 chars.
+name: truthseeker-llm-safety
+description: Daily fact-check of the 3 most-discussed X threads in the target domain, with primary-source citations and a calibration note.
+
+build:
+  source: grok
+  language: python
+  entrypoint: main.py
+  required_tools:
+    - x_search
+    - web_search
+  grok_prompt: |
+    You are generating ONE Python 3.11 file, `main.py`, that implements a
+    daily fact-checker for X. Output one fenced ```python code block. Output
+    nothing outside the code block.
+
+    Hard constraints (do NOT violate any of these):
+      - Use the xai-sdk Python client for model calls.
+      - Use the official X API v2 via httpx with timeout=10.0 on every call.
+      - NEVER use shell=True, eval(), exec(), os.system(), or pickle.
+      - Read XAI_API_KEY and X_BEARER_TOKEN from os.environ. If either is
+        missing, log to stderr and sys.exit(2).
+      - Retry transient failures (HTTP 429/5xx, timeouts) with tenacity:
+        3 attempts, wait_exponential(min=2, max=16).
+
+    Behaviour — implement exactly these four steps, each as a named function:
+
+      1. `select_threads(domain: str) -> list[Thread]`
+         Call x_search for the target domain, last 24 hours, English, no
+         retweets, ≥200 likes on the root post. Cluster near-duplicates and
+         return the 3 root threads with the highest reply counts. Each
+         `Thread` is a dataclass with {id, author, claim_text, reply_count}.
+
+      2. `extract_claims(thread: Thread) -> list[Claim]`
+         Ask Grok to extract the 1-3 *falsifiable* factual claims in the
+         root post. A "falsifiable claim" is a statement about a specific
+         event, number, date, or named entity. Opinions are discarded.
+         Each `Claim` = {text, subject, object, asserted_value}.
+
+      3. `verdict(claim: Claim) -> Verdict`
+         Call web_search for two primary sources for `claim`. Prefer
+         peer-reviewed venues, official releases, and .gov/.edu domains.
+         Return `Verdict` = {label ∈ {"SUPPORTED","DISPUTED","UNVERIFIED"},
+         confidence ∈ [0,1], primary_source_url, one_line_note}.
+
+      4. `publish(thread_id, claim_verdicts)` — compose and post a 5-post
+         X thread in reply to `thread_id`:
+            post 0: "Truth report — {domain} — {today_iso} (1/5)"
+            posts 1..3: one `Claim` each. Format:
+                "VERDICT: {label} (confidence {conf:.0%})
+                 {one_line_note}
+                 source: {primary_source_url}"
+            post 4: closing meta post with cumulative confidence and a
+                    link to this template ("built with grok-build-bridge").
+         Enforce len(post) ≤ 280 before every API call; raise ValueError if
+         violated.
+
+    Logging: emit one JSON line per step to stderr so each run is
+    auditable. Print the final {verdicts:[...], posted_ids:[...]} to stdout.
+
+    Organisation: module-level `DOMAIN = os.environ.get("BRIDGE_DOMAIN",
+    "llm-safety")`; top-level `if __name__ == "__main__": sys.exit(main())`.
+
+deploy:
+  target: x
+  runtime: grok-install
+  post_to_x: true
+  schedule: "0 14 * * *"
+  safety_scan: true
+
+agent:
+  model: grok-4.20-0309
+  reasoning_effort: medium
+  personality: Calibrated and terse. Says "unverified" before "false". Always links a source.
+
+safety:
+  audit_before_post: true
+  max_tokens_per_run: 20000
+  lucas_veto_enabled: false

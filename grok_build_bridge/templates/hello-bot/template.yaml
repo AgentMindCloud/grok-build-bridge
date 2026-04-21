@@ -1,6 +1,0 @@
-name: hello-bot
-description: The smallest local-source agent. Greets stdout and exits — ideal as a first bridge smoke test.
-required_env: []
-files:
-  - bridge.yaml
-  - hello-bot/main.py
