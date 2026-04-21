@@ -111,9 +111,7 @@ def _render_error_panel(title: str, exc: BaseException, hints: Sequence[str]) ->
     for hint in hints:
         body.append("  • ", style="brand.muted")
         body.append(hint + "\n")
-    console.print(
-        Panel(body, title=f"[brand.error]{title}[/]", border_style="brand.error")
-    )
+    console.print(Panel(body, title=f"[brand.error]{title}[/]", border_style="brand.error"))
 
 
 def _hints_for(exc: BaseException) -> list[str]:
@@ -383,9 +381,7 @@ def init_cmd(
     if not isinstance(file_specs, list) or not file_specs:
         _render_error_panel(
             "📚 Template is empty",
-            BridgeRuntimeError(
-                f"template {template_name!r} has no files declared in INDEX.yaml"
-            ),
+            BridgeRuntimeError(f"template {template_name!r} has no files declared in INDEX.yaml"),
             ["Open INDEX.yaml in the templates dir and add a files: list."],
         )
         raise typer.Exit(code=_EXIT_CONFIG)
@@ -402,9 +398,7 @@ def init_cmd(
         src_res = templates_root / src_rel
         dst = out / dst_rel
         if not src_res.is_file():
-            console.print(
-                Text(f"skipped (missing source): {src_rel}", style="brand.warn")
-            )
+            console.print(Text(f"skipped (missing source): {src_rel}", style="brand.warn"))
             continue
         if dst.exists() and not force:
             if not typer.confirm(
@@ -426,9 +420,7 @@ def init_cmd(
         body.append("  + ", style="brand.success")
         body.append(str(path) + "\n")
     body.append("\nNext: ", style="brand.primary")
-    body.append(
-        "edit the bridge.yaml, then run `grok-build-bridge run bridge.yaml --dry-run`."
-    )
+    body.append("edit the bridge.yaml, then run `grok-build-bridge run bridge.yaml --dry-run`.")
     console.print(
         Panel(
             body,

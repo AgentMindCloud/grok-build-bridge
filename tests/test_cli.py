@@ -51,9 +51,7 @@ if __name__ == "__main__":
 
 
 @pytest.fixture(autouse=True)
-def _isolate_cwd(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> Iterator[Path]:
+def _isolate_cwd(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Iterator[Path]:
     """Run each test in an isolated cwd and strip the xAI key."""
     monkeypatch.delenv("XAI_API_KEY", raising=False)
     monkeypatch.chdir(tmp_path)
@@ -194,9 +192,7 @@ def test_templates_command_lists_all_six_bundled_templates() -> None:
 def test_init_for_flat_template_copies_to_bridge_yaml(tmp_path: Path) -> None:
     """Flat-style templates (INDEX `files: [{src, dst: bridge.yaml}]`) land as bridge.yaml."""
     out = tmp_path / "flat-template-out"
-    result = runner.invoke(
-        app, ["init", "x-trend-analyzer", "--out", str(out), "--force"]
-    )
+    result = runner.invoke(app, ["init", "x-trend-analyzer", "--out", str(out), "--force"])
     assert result.exit_code == 0, _combined_output(result)
     assert (out / "bridge.yaml").is_file()
     # The copied file should be the x-trend-analyzer YAML.
@@ -214,9 +210,7 @@ def test_init_copies_bundled_template_into_out_dir(tmp_path: Path) -> None:
 
 
 def test_init_unknown_template_exits_config(tmp_path: Path) -> None:
-    result = runner.invoke(
-        app, ["init", "does-not-exist", "--out", str(tmp_path / "x")]
-    )
+    result = runner.invoke(app, ["init", "does-not-exist", "--out", str(tmp_path / "x")])
     assert result.exit_code == 2
 
 
@@ -227,9 +221,7 @@ def test_init_does_not_overwrite_without_force(tmp_path: Path) -> None:
     pre_existing.write_text("original: content\n", encoding="utf-8")
 
     # Respond "n" (no) to the overwrite prompt.
-    result = runner.invoke(
-        app, ["init", "hello-bot", "--out", str(out)], input="n\n"
-    )
+    result = runner.invoke(app, ["init", "hello-bot", "--out", str(out)], input="n\n")
     assert result.exit_code == 0
     assert pre_existing.read_text() == "original: content\n"
 

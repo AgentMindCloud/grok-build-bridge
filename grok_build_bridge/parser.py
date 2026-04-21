@@ -99,7 +99,8 @@ def _load_schema() -> dict[str, Any]:
     # Not using functools.lru_cache because we want fresh reads in tests that
     # patch the schema path; this is cheap (tens of KB) so re-reading is fine.
     with _SCHEMA_PATH.open(encoding="utf-8") as fh:
-        return json.load(fh)
+        data: dict[str, Any] = json.load(fh)
+    return data
 
 
 def _build_default_filling_validator() -> type[Draft202012Validator]:
@@ -125,14 +126,15 @@ def _build_default_filling_validator() -> type[Draft202012Validator]:
                     instance.setdefault(prop, copy.deepcopy(subschema["default"]))
         yield from base_properties(validator, properties, instance, schema)
 
-    return validators.extend(
+    # ``validators.extend`` is untyped in jsonschema; narrow the return type
+    # here so the rest of the parser stays fully typed.
+    extended: type[Draft202012Validator] = validators.extend(  # type: ignore[no-untyped-call]
         Draft202012Validator, {"properties": _set_defaults}
     )
+    return extended
 
 
-_DefaultFillingValidator: Final[type[Draft202012Validator]] = (
-    _build_default_filling_validator()
-)
+_DefaultFillingValidator: Final[type[Draft202012Validator]] = _build_default_filling_validator()
 
 
 def _raise_from_validation_error(
@@ -154,7 +156,12 @@ def _raise_from_validation_error(
     # missing key into the path so users see ``build.grok_prompt`` instead of
     # an unhelpful ``build``.
     if exc.validator == "required" and isinstance(exc.instance, dict):
-        required_keys = exc.validator_value or []
+        # ``validator_value`` may be an ``Unset`` sentinel when jsonschema
+        # cannot resolve the value; fall back to an empty list in that case.
+        raw_required = getattr(exc, "validator_value", None)
+        required_keys: list[str] = (
+            list(raw_required) if isinstance(raw_required, (list, tuple)) else []
+        )
         missing = [k for k in required_keys if k not in exc.instance]
         if missing:
             key_path.append(missing[0])
@@ -301,4 +308,5 @@ def load_yaml(path: str | Path) -> MappingProxyType[str, Any]:
 
     _apply_cross_field_defaults(document)
 
-    return _freeze(document)
+    frozen: MappingProxyType[str, Any] = _freeze(document)
+    return frozen

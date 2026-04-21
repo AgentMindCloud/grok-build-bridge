@@ -149,15 +149,19 @@ def test_schedule_string_is_preserved_verbatim(tmp_path: Path) -> None:
             id="unsupported-schema-version",
         ),
         pytest.param(
-            lambda d: d["build"].__setitem__("source", "local")
-            or d["build"].__setitem__("language", "rust"),
+            lambda d: (
+                d["build"].__setitem__("source", "local")
+                or d["build"].__setitem__("language", "rust")
+            ),
             "language",
             id="unsupported-language",
         ),
         pytest.param(
-            lambda d: d["safety"].__setitem__("max_tokens_per_run", 10)
-            if "safety" in d
-            else d.__setitem__("safety", {"max_tokens_per_run": 10}),
+            lambda d: (
+                d["safety"].__setitem__("max_tokens_per_run", 10)
+                if "safety" in d
+                else d.__setitem__("safety", {"max_tokens_per_run": 10})
+            ),
             "max_tokens_per_run",
             id="max-tokens-below-minimum",
         ),
@@ -178,9 +182,10 @@ def test_invalid_documents_raise_bridge_config_error(
     # key_path ends at the offending property so downstream tools can jump
     # straight to it without re-parsing the jsonschema message.
     assert excinfo.value.key_path, "key_path should not be empty for a schema error"
-    assert expected_key in {str(p) for p in excinfo.value.key_path} or str(
-        excinfo.value.key_path[-1]
-    ) == expected_key
+    assert (
+        expected_key in {str(p) for p in excinfo.value.key_path}
+        or str(excinfo.value.key_path[-1]) == expected_key
+    )
 
 
 def test_additional_properties_rejected(tmp_path: Path) -> None:

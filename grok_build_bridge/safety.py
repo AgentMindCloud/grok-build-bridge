@@ -475,14 +475,10 @@ def _resolve_client(
         return XAIClient(), None
     except ConfigError as exc:
         warn(f"⚠️  skipping deep safety audit: {exc.message}")
-        return None, (
-            "llm-audit-skipped: no XAI_API_KEY available — static-only scan"
-        )
+        return None, ("llm-audit-skipped: no XAI_API_KEY available — static-only scan")
 
 
-def _static_only_code_report(
-    static_issues: list[str], note: str | None
-) -> SafetyReport:
+def _static_only_code_report(static_issues: list[str], note: str | None) -> SafetyReport:
     """Build a code-scan report when the LLM audit had to be skipped."""
     issues = list(static_issues)
     if note:

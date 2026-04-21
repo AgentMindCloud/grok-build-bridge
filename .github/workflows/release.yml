@@ -1,0 +1,135 @@
+name: Release
+
+# Triggered by pushing a tag like ``v0.1.0`` / ``v1.2.3``. Publishes the
+# wheel + sdist to PyPI via Trusted Publishing (no long-lived secrets in the
+# repo — configure once at https://pypi.org/manage/account/publishing/) and
+# cuts a GitHub Release with notes drawn from CHANGELOG.md.
+
+on:
+  push:
+    tags:
+      - "v*"
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: write  # required to create a GitHub Release
+  id-token: write  # required for PyPI Trusted Publishing (OIDC)
+
+jobs:
+  build:
+    name: Build distributions
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install build
+        run: |
+          python -m pip install --upgrade pip
+          pip install build
+
+      - name: Build wheel + sdist
+        run: python -m build
+
+      - name: Sanity-check filenames match the pushed tag
+        # ``github.ref_name`` is e.g. ``v0.1.0``. Our distributions carry the
+        # version without the leading ``v`` — e.g. ``grok_build_bridge-0.1.0``.
+        run: |
+          tag="${GITHUB_REF_NAME#v}"
+          shopt -s nullglob
+          found=0
+          for f in dist/*.whl dist/*.tar.gz; do
+            case "$f" in
+              *"-${tag}-"*|*"-${tag}.tar.gz") found=1 ;;
+            esac
+          done
+          if [ "$found" -ne 1 ]; then
+            echo "::error::No dist artefact matches tag ${tag}" >&2
+            ls -la dist
+            exit 1
+          fi
+
+      - name: Upload dist artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: dist
+          path: dist/
+
+  publish-pypi:
+    name: Publish to PyPI
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: pypi
+      url: https://pypi.org/p/grok-build-bridge
+    steps:
+      - name: Download dist artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist/
+
+      - name: Publish to PyPI via Trusted Publishing
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          # Trusted Publishing — no API token needed. Configure the project
+          # publisher on PyPI with:
+          #   Publisher: GitHub
+          #   Owner: AgentMindCloud
+          #   Repository: grok-build-bridge
+          #   Workflow: release.yml
+          #   Environment: pypi
+          packages-dir: dist/
+
+  github-release:
+    name: Create GitHub Release
+    needs: [build, publish-pypi]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Download dist artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist/
+
+      - name: Extract release notes from CHANGELOG.md
+        # Pull the section whose header matches the pushed tag so the Release
+        # body is always in lockstep with the CHANGELOG we actually committed.
+        id: notes
+        run: |
+          tag="${GITHUB_REF_NAME#v}"
+          python - "$tag" <<'PY' > release-notes.md
+          import re, sys
+          tag = sys.argv[1]
+          text = open("CHANGELOG.md", encoding="utf-8").read()
+          header = re.compile(rf"^##\s+\[{re.escape(tag)}\]", re.M)
+          m = header.search(text)
+          if not m:
+              print(f"_No CHANGELOG entry for {tag}; see the full diff on GitHub._")
+              sys.exit(0)
+          # Read lines until the next ``## `` header.
+          start = m.end()
+          next_header = re.search(r"^##\s+", text[start:], re.M)
+          body = text[start:start + next_header.start()] if next_header else text[start:]
+          print(body.strip())
+          PY
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist/*
+          body_path: release-notes.md
+          generate_release_notes: true
+          fail_on_unmatched_files: true

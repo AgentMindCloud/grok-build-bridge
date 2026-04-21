@@ -241,8 +241,7 @@ def run_bridge(
                 BridgeSafetyError(
                     f"safety scan blocked the deploy ({len(safety_report.issues)} issue(s))",
                     suggestion=(
-                        "Fix the reported issues, or re-run with --force to "
-                        "deploy anyway."
+                        "Fix the reported issues, or re-run with --force to deploy anyway."
                     ),
                 ),
             )
@@ -256,9 +255,7 @@ def run_bridge(
     else:
         with phase_progress("🚀  deploying") as (prog, task):
             try:
-                deploy_url = deploy_to_target(
-                    generated_path, config, client=resolved_client
-                )
+                deploy_url = deploy_to_target(generated_path, config, client=resolved_client)
             except BridgeRuntimeError as exc:
                 raise BridgePhaseError("deploy", exc) from exc
             prog.update(task, tokens=0)

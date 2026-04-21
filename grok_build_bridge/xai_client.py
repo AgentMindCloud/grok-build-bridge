@@ -107,14 +107,17 @@ class ToolExecutionError(BridgeRuntimeError):
 # whatever it raises into ``ToolExecutionError`` above. The SDK does not
 # expose one today (checked against xai-sdk 1.11), so we fall back to a
 # never-matching sentinel class that ``isinstance`` will cleanly ignore.
-try:  # pragma: no cover — depends on installed SDK version
-    from xai_sdk.errors import (
-        ToolExecutionError as _SdkToolExecutionError,  # type: ignore[import-not-found]
-    )
-except ImportError:  # pragma: no cover
+class _SdkToolExecutionErrorFallback(Exception):
+    """Sentinel used when the SDK does not export a ToolExecutionError."""
 
-    class _SdkToolExecutionError(Exception):
-        """Sentinel used when the SDK does not export a ToolExecutionError."""
+
+_SdkToolExecutionError: type[Exception]
+try:  # pragma: no cover — depends on installed SDK version
+    from xai_sdk.errors import ToolExecutionError as _RealSdkToolExecutionError
+
+    _SdkToolExecutionError = _RealSdkToolExecutionError
+except ImportError:  # pragma: no cover
+    _SdkToolExecutionError = _SdkToolExecutionErrorFallback
 
 
 # ---------------------------------------------------------------------------
@@ -197,11 +200,7 @@ def _warn_before_sleep(retry_state: RetryCallState) -> None:
     """Tenacity ``before_sleep`` hook that prints a coloured retry line."""
     outcome = retry_state.outcome
     exc = outcome.exception() if outcome is not None else None
-    wait_seconds = (
-        retry_state.next_action.sleep
-        if retry_state.next_action is not None
-        else 0.0
-    )
+    wait_seconds = retry_state.next_action.sleep if retry_state.next_action is not None else 0.0
     next_attempt = retry_state.attempt_number + 1
     exc_name = type(exc).__name__ if exc is not None else "Exception"
     # Emoji allow-listed in the project style guide.
@@ -244,9 +243,7 @@ def _run_with_retries(
             min=config.wait_min,
             max=config.wait_max,
         ),
-        retry=retry_if_exception_type(
-            (RateLimitError, APIConnectionError, httpx.TimeoutException)
-        ),
+        retry=retry_if_exception_type((RateLimitError, APIConnectionError, httpx.TimeoutException)),
         before_sleep=_warn_before_sleep,
         reraise=False,
     )
@@ -257,8 +254,7 @@ def _run_with_retries(
         raise BridgeRuntimeError(
             f"xAI call failed after {config.max_attempts} attempts: {last}",
             suggestion=(
-                "Verify XAI_API_KEY, check rate limits at https://console.x.ai, "
-                "or retry later."
+                "Verify XAI_API_KEY, check rate limits at https://console.x.ai, or retry later."
             ),
         ) from last
 
@@ -295,8 +291,7 @@ class XAIClient:
             raise ConfigError(
                 "missing xAI API key",
                 suggestion=(
-                    "Set XAI_API_KEY in your environment or pass api_key=... "
-                    "to XAIClient()."
+                    "Set XAI_API_KEY in your environment or pass api_key=... to XAIClient()."
                 ),
             )
         self._api_key: str = resolved
@@ -379,7 +374,8 @@ class XAIClient:
                 use_encrypted_content=use_encrypted_content,
             )
             self._prime_chat(chat, messages)
-            return chat.stream()
+            stream: Iterator[tuple[Any, Any]] = chat.stream()
+            return stream
 
         try:
             iterator = _run_with_retries(
@@ -387,10 +383,7 @@ class XAIClient:
                 config=self._retry_config,
             )
         except (ToolExecutionError, _SdkToolExecutionError) as exc:
-            warn(
-                "⚠️  ToolExecutionError — retrying once with tools disabled "
-                "before surfacing."
-            )
+            warn("⚠️  ToolExecutionError — retrying once with tools disabled before surfacing.")
             try:
                 iterator = _run_with_retries(
                     lambda: _start(None),
@@ -465,10 +458,7 @@ class XAIClient:
                 config=self._retry_config,
             )
         except (ToolExecutionError, _SdkToolExecutionError):
-            warn(
-                "⚠️  ToolExecutionError — retrying once with tools disabled "
-                "before surfacing."
-            )
+            warn("⚠️  ToolExecutionError — retrying once with tools disabled before surfacing.")
             try:
                 return _run_with_retries(
                     lambda: _sample(None),

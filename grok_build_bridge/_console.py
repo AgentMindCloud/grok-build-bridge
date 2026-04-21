@@ -29,6 +29,7 @@ from rich.console import Console
 from rich.progress import (
     Progress,
     SpinnerColumn,
+    TaskID,
     TextColumn,
     TimeElapsedColumn,
 )
@@ -93,7 +94,7 @@ def section(title: str) -> None:
 
 
 @contextmanager
-def phase_progress(description: str) -> Iterator[tuple[Progress, int]]:
+def phase_progress(description: str) -> Iterator[tuple[Progress, TaskID]]:
     """Rich progress context for a single long-running phase.
 
     Yields ``(progress, task_id)`` so callers can bump the token counter as

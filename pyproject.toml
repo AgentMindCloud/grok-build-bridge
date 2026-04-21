@@ -37,8 +37,12 @@ dependencies = [
 dev = [
     "pytest>=8",
     "pytest-asyncio",
-    "mypy",
-    "ruff",
+    "pytest-cov>=5",
+    "mypy>=1.10",
+    "ruff>=0.6",
+    "build>=1.2",
+    "types-PyYAML",
+    "types-jsonschema",
 ]
 
 [project.urls]
@@ -52,10 +56,9 @@ grok-build-bridge = "grok_build_bridge.cli:main"
 
 [tool.hatch.build.targets.wheel]
 packages = ["grok_build_bridge"]
-
-[tool.hatch.build.targets.wheel.force-include]
-"grok_build_bridge/templates" = "grok_build_bridge/templates"
-"grok_build_bridge/schema" = "grok_build_bridge/schema"
+# ``templates/`` and ``schema/`` live under the package directory, so
+# hatchling picks them up via ``packages`` above. No ``force-include``
+# needed — adding one would create duplicate entries in the wheel.
 
 [tool.hatch.build.targets.sdist]
 include = [
@@ -77,13 +80,49 @@ ignore = ["E501"]
 
 [tool.ruff.lint.per-file-ignores]
 "grok_build_bridge/cli.py" = ["B008"]
+"grok_build_bridge/_banner.py" = ["E501", "RUF001"]
+
+[tool.ruff.format]
+line-ending = "lf"
+quote-style = "double"
 
 [tool.mypy]
 python_version = "3.10"
 strict = true
 ignore_missing_imports = true
+# Typer stores runtime metadata in ``Option`` / ``Argument`` defaults that
+# mypy cannot type-check; allow those boundaries rather than littering the
+# CLI with per-line ignores.
+[[tool.mypy.overrides]]
+module = "grok_build_bridge.cli"
+disallow_untyped_decorators = false
+disallow_any_decorated = false
 
 [tool.pytest.ini_options]
 minversion = "8.0"
 testpaths = ["tests"]
 asyncio_mode = "auto"
+addopts = [
+    "-ra",
+    "--strict-markers",
+    "--strict-config",
+]
+
+[tool.coverage.run]
+source = ["grok_build_bridge"]
+branch = true
+omit = [
+    "grok_build_bridge/_banner.py",
+]
+
+[tool.coverage.report]
+skip_empty = true
+show_missing = true
+precision = 1
+exclude_also = [
+    "pragma: no cover",
+    "raise NotImplementedError",
+    "if __name__ == .__main__.:",
+    "if TYPE_CHECKING:",
+    "\\.\\.\\.",
+]

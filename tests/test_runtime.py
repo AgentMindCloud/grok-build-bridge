@@ -107,11 +107,7 @@ def cwd(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
 @pytest.fixture
 def fake_client() -> _FakeClient:
     return _FakeClient(
-        responses=[
-            json.dumps(
-                {"risks": [], "severity": 0.0, "recommendations": []}
-            )
-        ]
+        responses=[json.dumps({"risks": [], "severity": 0.0, "recommendations": []})]
     )
 
 
@@ -183,9 +179,7 @@ def test_safety_failure_aborts_deploy_without_force(
     )
 
     # LLM agrees (severity 0) but static catches os.system — should block.
-    client = _FakeClient(
-        responses=[json.dumps({"risks": [], "severity": 0.0})]
-    )
+    client = _FakeClient(responses=[json.dumps({"risks": [], "severity": 0.0})])
     with pytest.raises(BridgePhaseError) as excinfo:
         run_bridge(yaml_path, dry_run=True, client=client)
     assert excinfo.value.phase == "safety"
@@ -198,9 +192,7 @@ def test_force_flag_bypasses_safety_block(
     (yaml_path.parent / "e2e-bridge" / "main.py").write_text(
         'import os\nos.system("echo bad")\n', encoding="utf-8"
     )
-    client = _FakeClient(
-        responses=[json.dumps({"risks": [], "severity": 0.0})]
-    )
+    client = _FakeClient(responses=[json.dumps({"risks": [], "severity": 0.0})])
 
     result = run_bridge(yaml_path, dry_run=True, force=True, client=client)
     assert result.success is True
@@ -223,9 +215,7 @@ def test_manifest_contains_expected_fields(
     yaml_path = _write_project(cwd)
     result = run_bridge(yaml_path, dry_run=True, client=fake_client)
     assert result.generated_path is not None
-    manifest = json.loads(
-        (result.generated_path / "bridge.manifest.json").read_text()
-    )
+    manifest = json.loads((result.generated_path / "bridge.manifest.json").read_text())
     assert manifest["name"] == "e2e-bridge"
     assert manifest["source"] == "local"
     assert manifest["entrypoint"] == "main.py"

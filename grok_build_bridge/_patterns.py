@@ -60,9 +60,7 @@ _EVAL_CALL: Final[re.Pattern[str]] = re.compile(r"\b(?:eval|exec)\s*\(")
 # module rather than a bare regex because a pure regex can't prove the
 # ``break`` is in the *same* loop body; but for the ``matched?`` signal a
 # bare substring catch is good enough — the LLM double-checks.
-_WHILE_TRUE: Final[re.Pattern[str]] = re.compile(
-    r"\bwhile\s*\(?\s*(?:True|true|1)\s*\)?\s*:"
-)
+_WHILE_TRUE: Final[re.Pattern[str]] = re.compile(r"\bwhile\s*\(?\s*(?:True|true|1)\s*\)?\s*:")
 
 # subprocess.*(..., shell=True, ...). Matches both keyword and positional
 # usage that explicitly opts into a shell. We don't flag ``shell=False``.

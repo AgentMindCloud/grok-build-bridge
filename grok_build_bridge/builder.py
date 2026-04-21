@@ -101,9 +101,7 @@ def _write_manifest(
         "source": source,
         "model": model,
         "entrypoint": entrypoint,
-        "prompt_sha256": hashlib.sha256(prompt.encode("utf-8")).hexdigest()
-        if prompt
-        else None,
+        "prompt_sha256": hashlib.sha256(prompt.encode("utf-8")).hexdigest() if prompt else None,
         "generated_at": datetime.now(timezone.utc).isoformat(),
         "token_usage_estimate": max(1, int(generated_chars / 4)) if generated_chars else 0,
         "generated_chars": generated_chars,
@@ -232,9 +230,7 @@ def _run_grok_source(
             f"agent.model {model!r} is not in the supported set",
             suggestion=f"Use one of {sorted(ALLOWED_MODELS)}.",
         )
-    max_tokens = int(
-        (config.get("safety") or {}).get("max_tokens_per_run") or 8000
-    )
+    max_tokens = int((config.get("safety") or {}).get("max_tokens_per_run") or 8000)
     tools = _tools_for(config["build"].get("required_tools"))
 
     streamed = _stream_generation(
@@ -286,9 +282,7 @@ def _run_local_source(
     raise BuilderError(
         f"local source requires {entrypoint} to exist under {gen_dir} "
         f"or alongside the YAML; none of {candidates} was found",
-        suggestion=(
-            f"Place your code at {target} or switch build.source to 'grok'."
-        ),
+        suggestion=(f"Place your code at {target} or switch build.source to 'grok'."),
     )
 
 

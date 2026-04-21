@@ -55,10 +55,11 @@ def _dry_run_stub(payload: dict[str, Any]) -> dict[str, Any]:
     return {"dry_run": True, "path": str(_DRY_RUN_PAYLOAD_PATH)}
 
 
+deploy_to_x: DeployFn
 try:
-    from grok_install.runtime import deploy_to_x as _deploy_to_x  # type: ignore[import-not-found]
+    from grok_install.runtime import deploy_to_x as _deploy_to_x
 
-    deploy_to_x: DeployFn = _deploy_to_x
+    deploy_to_x = _deploy_to_x
     logger.info("deploy path: grok_install.runtime.deploy_to_x")
 except ImportError:
     deploy_to_x = _dry_run_stub
@@ -85,9 +86,7 @@ def _should_audit(config: dict[str, Any]) -> bool:
     safety = config.get("safety") or {}
     # Either gate turns the audit on; the schema defaults audit_before_post
     # to True so the caller has to opt OUT explicitly.
-    return bool(
-        safety.get("audit_before_post", True) or safety.get("lucas_veto_enabled", False)
-    )
+    return bool(safety.get("audit_before_post", True) or safety.get("lucas_veto_enabled", False))
 
 
 def _run_x_audit(
@@ -153,10 +152,7 @@ def _deploy_x(
 def _deploy_vercel(generated_dir: Path, config: dict[str, Any]) -> str:
     binary = shutil.which("vercel")
     if binary is None:
-        warn(
-            "vercel CLI not found on PATH — skipping deploy and printing "
-            "next steps instead."
-        )
+        warn("vercel CLI not found on PATH — skipping deploy and printing next steps instead.")
         info(
             "Install the CLI with `npm i -g vercel`, then run "
             f"`vercel --prod --yes` inside {generated_dir}."
@@ -197,9 +193,7 @@ def _deploy_render(generated_dir: Path, config: dict[str, Any]) -> str:
 def _deploy_local(generated_dir: Path, config: dict[str, Any]) -> str:
     entrypoint = (config.get("build") or {}).get("entrypoint") or "main.py"
     language = (config.get("build") or {}).get("language") or "python"
-    runner = {"python": "python", "typescript": "node", "go": "go run"}.get(
-        language, "python"
-    )
+    runner = {"python": "python", "typescript": "node", "go": "go run"}.get(language, "python")
     cmd = f"{runner} {generated_dir / entrypoint}"
     info(f"local target — run it with:  {cmd}")
     return str(generated_dir)
@@ -233,12 +227,13 @@ def _read_manifest(generated_dir: Path) -> dict[str, Any]:
     if not path.is_file():
         return {}
     try:
-        return json.loads(path.read_text(encoding="utf-8"))
+        data: dict[str, Any] = json.loads(path.read_text(encoding="utf-8"))
     except json.JSONDecodeError as exc:
         raise BridgeRuntimeError(
             f"bridge.manifest.json is not valid JSON: {path}",
             suggestion="Re-run the bridge to regenerate the manifest.",
         ) from exc
+    return data
 
 
 # ---------------------------------------------------------------------------

@@ -138,9 +138,7 @@ def fake_sdk(monkeypatch: pytest.MonkeyPatch) -> _FakeClient:
 def fast_client(fake_sdk: _FakeClient) -> XAIClient:
     """Return an XAIClient with zero-wait retries for count-only assertions."""
     return XAIClient(
-        retry_config=RetryConfig(
-            max_attempts=3, wait_multiplier=0.0, wait_min=0.0, wait_max=0.0
-        ),
+        retry_config=RetryConfig(max_attempts=3, wait_multiplier=0.0, wait_min=0.0, wait_max=0.0),
     )
 
 
@@ -266,9 +264,7 @@ def test_rate_limit_retried_three_times_then_raises(
     assert isinstance(excinfo.value.__cause__, RateLimitError)
 
 
-def test_recovers_after_two_rate_limits(
-    fake_sdk: _FakeClient, fast_client: XAIClient
-) -> None:
+def test_recovers_after_two_rate_limits(fake_sdk: _FakeClient, fast_client: XAIClient) -> None:
     fake_sdk.chat.next_sample_script = [
         RateLimitError("quota-1"),
         RateLimitError("quota-2"),
@@ -279,9 +275,7 @@ def test_recovers_after_two_rate_limits(
     assert len(fake_sdk.chat.created) == 3
 
 
-def test_backoff_sleeps_between_attempts(
-    fake_sdk: _FakeClient, no_sleep: list[float]
-) -> None:
+def test_backoff_sleeps_between_attempts(fake_sdk: _FakeClient, no_sleep: list[float]) -> None:
     fake_sdk.chat.next_sample_script = [
         RateLimitError("q"),
         RateLimitError("q"),
@@ -289,9 +283,7 @@ def test_backoff_sleeps_between_attempts(
     ]
     # Production-ish config so we can assert the wait respected the min/max.
     client = XAIClient(
-        retry_config=RetryConfig(
-            max_attempts=3, wait_multiplier=1.0, wait_min=2.0, wait_max=16.0
-        ),
+        retry_config=RetryConfig(max_attempts=3, wait_multiplier=1.0, wait_min=2.0, wait_max=16.0),
     )
     with pytest.raises(BridgeRuntimeError):
         client.single_call(model="grok-4.20-0309", prompt="hi")
@@ -301,9 +293,7 @@ def test_backoff_sleeps_between_attempts(
     assert all(2.0 <= s <= 16.0 for s in no_sleep)
 
 
-def test_api_connection_error_is_retryable(
-    fake_sdk: _FakeClient, fast_client: XAIClient
-) -> None:
+def test_api_connection_error_is_retryable(fake_sdk: _FakeClient, fast_client: XAIClient) -> None:
     fake_sdk.chat.next_sample_script = [
         APIConnectionError("dns"),
         _FakeResponse(content="recovered"),
@@ -311,9 +301,7 @@ def test_api_connection_error_is_retryable(
     assert fast_client.single_call("grok-4.20-0309", prompt="hi") == "recovered"
 
 
-def test_httpx_timeout_is_retryable(
-    fake_sdk: _FakeClient, fast_client: XAIClient
-) -> None:
+def test_httpx_timeout_is_retryable(fake_sdk: _FakeClient, fast_client: XAIClient) -> None:
     fake_sdk.chat.next_sample_script = [
         httpx.ReadTimeout("slow"),
         _FakeResponse(content="done"),
@@ -321,9 +309,7 @@ def test_httpx_timeout_is_retryable(
     assert fast_client.single_call("grok-4.20-0309", prompt="hi") == "done"
 
 
-def test_unexpected_exception_not_retried(
-    fake_sdk: _FakeClient, fast_client: XAIClient
-) -> None:
+def test_unexpected_exception_not_retried(fake_sdk: _FakeClient, fast_client: XAIClient) -> None:
     fake_sdk.chat.next_sample_script = [
         ValueError("unexpected"),
         _FakeResponse(content="not reached"),
@@ -391,9 +377,7 @@ def test_unknown_role_raises(fake_sdk: _FakeClient, fast_client: XAIClient) -> N
         )
 
 
-def test_missing_role_or_content_raises(
-    fake_sdk: _FakeClient, fast_client: XAIClient
-) -> None:
+def test_missing_role_or_content_raises(fake_sdk: _FakeClient, fast_client: XAIClient) -> None:
     with pytest.raises(BridgeRuntimeError, match="missing role/content"):
         list(
             fast_client.stream_chat(
@@ -403,9 +387,7 @@ def test_missing_role_or_content_raises(
         )
 
 
-def test_single_call_injects_system_prompt(
-    fake_sdk: _FakeClient, fast_client: XAIClient
-) -> None:
+def test_single_call_injects_system_prompt(fake_sdk: _FakeClient, fast_client: XAIClient) -> None:
     fake_sdk.chat.next_sample_script = [_FakeResponse(content="hi")]
     fast_client.single_call(
         "grok-4.20-0309",
@@ -416,8 +398,6 @@ def test_single_call_injects_system_prompt(
     assert len(appended) == 2  # system + user
 
 
-def test_single_call_rejects_unknown_kwargs(
-    fake_sdk: _FakeClient, fast_client: XAIClient
-) -> None:
+def test_single_call_rejects_unknown_kwargs(fake_sdk: _FakeClient, fast_client: XAIClient) -> None:
     with pytest.raises(BridgeRuntimeError, match="unexpected keyword"):
         fast_client.single_call("grok-4.20-0309", prompt="hi", wat=1)
