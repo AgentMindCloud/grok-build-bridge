@@ -51,9 +51,26 @@ def run(
         "--dry-run",
         help="🛡️ Build and validate without deploying to X.",
     ),
+    force: bool = typer.Option(
+        False,
+        "--force",
+        help="Proceed with deploy even if the safety scan reports issues.",
+    ),
 ) -> None:
     """🚀 Run the full build → safety → deploy bridge for a YAML config."""
-    raise NotImplementedError("filled in session 2")
+    from grok_build_bridge.runtime import (
+        BridgePhaseError,
+        _report_error,
+        run_bridge,
+    )
+
+    try:
+        result = run_bridge(config, dry_run=dry_run, force=force)
+    except BridgePhaseError as exc:
+        _report_error(exc)
+        raise typer.Exit(code=1) from exc
+    if not result.success:
+        raise typer.Exit(code=1)
 
 
 @app.command("build")

@@ -1,0 +1,23 @@
+version: "1.0"
+name: hello-bridge
+description: A tiny agent that prints a greeting — used as the Bridge smoke test.
+
+build:
+  source: local
+  language: python
+  entrypoint: main.py
+
+deploy:
+  target: local
+  post_to_x: false
+  safety_scan: true
+
+agent:
+  model: grok-4.20-0309
+  reasoning_effort: low
+  personality: friendly and terse
+
+safety:
+  audit_before_post: false
+  max_tokens_per_run: 2000
+  lucas_veto_enabled: false
