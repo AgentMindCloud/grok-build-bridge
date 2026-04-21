@@ -19,9 +19,17 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
+from rich.panel import Panel
 from rich.table import Table
 
-from grok_build_bridge._console import console, error, info, section, warn
+from grok_build_bridge._console import (
+    console,
+    error,
+    info,
+    phase_progress,
+    section,
+    warn,
+)
 from grok_build_bridge.builder import generate_code
 from grok_build_bridge.deploy import deploy_to_target
 from grok_build_bridge.parser import BridgeConfigError, load_yaml
@@ -104,10 +112,10 @@ def _safe_build_client(explicit: XAIClient | None) -> XAIClient | None:
         return None
 
 
-def _print_result_table(result: BridgeResult) -> None:
-    """Render the final :class:`BridgeResult` as a Rich table."""
-    table = Table(title="✅  Bridge result", show_header=False, border_style="green")
-    table.add_column("field", style="bold cyan", no_wrap=True)
+def _print_result_panel(result: BridgeResult) -> None:
+    """Render the final :class:`BridgeResult` as a green success panel."""
+    table = Table(show_header=False, box=None, pad_edge=False)
+    table.add_column("field", style="brand.primary", no_wrap=True)
     table.add_column("value")
     table.add_row("success", "yes" if result.success else "no")
     table.add_row("generated_path", str(result.generated_path or ""))
@@ -122,7 +130,17 @@ def _print_result_table(result: BridgeResult) -> None:
     table.add_row("deploy_url", result.deploy_url or "")
     table.add_row("duration", f"{result.duration_seconds:.2f}s")
     table.add_row("tokens (est.)", str(result.total_tokens))
-    console.print(table)
+
+    title_style = "brand.success" if result.success else "brand.error"
+    title_text = "✅ Bridge complete" if result.success else "🚫 Bridge failed"
+    border = "brand.success" if result.success else "brand.error"
+    console.print(
+        Panel(
+            table,
+            title=f"[{title_style}]{title_text}[/]",
+            border_style=border,
+        )
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -175,29 +193,33 @@ def run_bridge(
 
     # --- Phase 2 ---------------------------------------------------------
     section("🎯  phase 2 — generate code")
-    try:
-        generated_path = generate_code(
-            config,
-            resolved_client,
-            yaml_dir=yaml_path.parent,
-        )
-    except BridgeRuntimeError as exc:
-        raise BridgePhaseError("build", exc) from exc
+    with phase_progress("🎯  generating") as (prog, task):
+        try:
+            generated_path = generate_code(
+                config,
+                resolved_client,
+                yaml_dir=yaml_path.parent,
+            )
+        except BridgeRuntimeError as exc:
+            raise BridgePhaseError("build", exc) from exc
+        prog.update(task, tokens=0)
     info(f"generated: {generated_path}")
 
     # --- Phase 3 ---------------------------------------------------------
     section("🛡️  phase 3 — safety scan")
-    try:
-        entrypoint = config["build"]["entrypoint"]
-        code_text = (generated_path / entrypoint).read_text(encoding="utf-8")
-        safety_report = scan_generated_code(
-            code_text,
-            language=config["build"]["language"],
-            config=config,
-            client=resolved_client,
-        )
-    except BridgeRuntimeError as exc:
-        raise BridgePhaseError("safety", exc) from exc
+    with phase_progress("🛡️  scanning") as (prog, task):
+        try:
+            entrypoint = config["build"]["entrypoint"]
+            code_text = (generated_path / entrypoint).read_text(encoding="utf-8")
+            safety_report = scan_generated_code(
+                code_text,
+                language=config["build"]["language"],
+                config=config,
+                client=resolved_client,
+            )
+        except BridgeRuntimeError as exc:
+            raise BridgePhaseError("safety", exc) from exc
+        prog.update(task, tokens=safety_report.estimated_tokens)
     total_tokens += safety_report.estimated_tokens
 
     if not safety_report.safe:
@@ -213,7 +235,7 @@ def run_bridge(
                 duration_seconds=time.monotonic() - started,
                 total_tokens=total_tokens,
             )
-            _print_result_table(result)
+            _print_result_panel(result)
             raise BridgePhaseError(
                 "safety",
                 BridgeSafetyError(
@@ -232,12 +254,14 @@ def run_bridge(
     if dry_run:
         info(f"dry-run: skipping deploy to {deploy_target!r}")
     else:
-        try:
-            deploy_url = deploy_to_target(
-                generated_path, config, client=resolved_client
-            )
-        except BridgeRuntimeError as exc:
-            raise BridgePhaseError("deploy", exc) from exc
+        with phase_progress("🚀  deploying") as (prog, task):
+            try:
+                deploy_url = deploy_to_target(
+                    generated_path, config, client=resolved_client
+                )
+            except BridgeRuntimeError as exc:
+                raise BridgePhaseError("deploy", exc) from exc
+            prog.update(task, tokens=0)
 
     # --- Phase 5 ---------------------------------------------------------
     section("✅  phase 5 — summary")
@@ -251,7 +275,7 @@ def run_bridge(
         duration_seconds=duration,
         total_tokens=total_tokens,
     )
-    _print_result_table(result)
+    _print_result_panel(result)
     return result
 
 

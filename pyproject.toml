@@ -53,6 +53,10 @@ grok-build-bridge = "grok_build_bridge.cli:main"
 [tool.hatch.build.targets.wheel]
 packages = ["grok_build_bridge"]
 
+[tool.hatch.build.targets.wheel.force-include]
+"grok_build_bridge/templates" = "grok_build_bridge/templates"
+"grok_build_bridge/schema" = "grok_build_bridge/schema"
+
 [tool.hatch.build.targets.sdist]
 include = [
     "grok_build_bridge",
