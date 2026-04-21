@@ -1,0 +1,39 @@
+# Paste the two new yamlValidation entries below into the EXISTING
+# `contributes.yamlValidation` array in the Grok ecosystem VS Code extension's
+# package.json. If the extension already registers schemas for
+# `grok-install.yaml`, keep those entries and merge the two below alongside
+# them — VS Code / the Red Hat YAML extension happily accepts multiple
+# fileMatch entries per schema and multiple schemas per array.
+#
+# The "url" is relative to the extension root, so the referenced file must
+# live at <extension>/schemas/bridge.schema.json. Copy
+# vscode/schemas/bridge.schema.json from this repo into the extension's
+# schemas/ directory (create it if missing).
+#
+# Also copy vscode/snippets/bridge.code-snippets to the extension's snippets/
+# dir and add the matching `contributes.snippets` entry shown at the bottom
+# of this patch.
+
+--- a/package.json
++++ b/package.json
+@@ -1,6 +1,21 @@
+   "contributes": {
+     "yamlValidation": [
++      {
++        "fileMatch": "grok-build-bridge.yaml",
++        "url": "./schemas/bridge.schema.json"
++      },
++      {
++        "fileMatch": "*.bridge.yaml",
++        "url": "./schemas/bridge.schema.json"
++      },
+       // ...existing entries (e.g. grok-install.yaml) stay here...
+     ],
++    "snippets": [
++      {
++        "language": "yaml",
++        "path": "./snippets/bridge.code-snippets"
++      }
++      // ...merge with existing snippets entries...
++    ]
+   }

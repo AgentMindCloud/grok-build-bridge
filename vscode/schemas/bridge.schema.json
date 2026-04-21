@@ -1,0 +1,214 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://agentmind.cloud/grok-build-bridge/vscode.schema.json",
+  "title": "Grok Build Bridge configuration",
+  "markdownDescription": "Configuration for **Grok Build Bridge** — one YAML, one command, one deployed X agent.\n\nSee [docs/build-bridge.md — Writing a bridge.yaml](../../docs/build-bridge.md#writing-a-bridgeyaml).",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["version", "name", "description", "build", "deploy", "agent"],
+  "$defs": {
+    "ToolName": {
+      "type": "string",
+      "enum": ["x_search", "web_search", "code_execution"],
+      "markdownEnumDescriptions": [
+        "**`x_search`** — let Grok query the X timeline (posts, replies, trends). Use for any agent that reacts to the platform it will run on.",
+        "**`web_search`** — general web search. Use for fact-check / current-events agents; skip for purely on-platform bots to keep latency down.",
+        "**`code_execution`** — sandboxed code-execution tool. Use when the agent does math, parses data, or generates charts. Costs extra tokens."
+      ],
+      "markdownDescription": "xAI tool the generated agent is allowed to call. The bridge's safety layer denies any tool not listed here.\n\nSee [docs/build-bridge.md — Safety guarantees](../../docs/build-bridge.md#safety-guarantees)."
+    },
+    "ModelName": {
+      "type": "string",
+      "enum": ["grok-4.20-0309", "grok-4.20-multi-agent-0309"],
+      "markdownEnumDescriptions": [
+        "**`grok-4.20-0309`** — default production model. Good general reasoning, cheapest of the two. Pick this for most bridges.",
+        "**`grok-4.20-multi-agent-0309`** — multi-agent variant. Better at multi-step planning but ~3× more expensive. Use for agents that orchestrate other tools."
+      ],
+      "markdownDescription": "Grok model id.\n\nThe bridge pins an explicit enum so a typo (`grok-4`, `grok-4.20`) fails fast at validation time instead of mid-deploy."
+    },
+    "ReasoningEffort": {
+      "type": "string",
+      "enum": ["low", "medium", "high", "xhigh"],
+      "default": "medium",
+      "markdownEnumDescriptions": [
+        "**`low`** — minimal deliberation. Fast, cheap, fine for formatting or templating tasks.",
+        "**`medium`** — the default. Balanced cost / quality. Use when you are not sure.",
+        "**`high`** — extended deliberation. Use for code generation or non-trivial reasoning.",
+        "**`xhigh`** — maximum deliberation budget. Use sparingly — it blows through `max_tokens_per_run` quickly."
+      ],
+      "markdownDescription": "Reasoning budget dial, forwarded verbatim to the xAI API's `reasoning_effort` parameter."
+    }
+  },
+  "properties": {
+    "version": {
+      "type": "string",
+      "enum": ["1.0"],
+      "markdownEnumDescriptions": [
+        "**`1.0`** — current schema. Only value accepted by grok-build-bridge ≥ 0.1."
+      ],
+      "markdownDescription": "Schema version. Pinned to an enum so a future `1.1` / `2.0` cannot be silently consumed by an older bridge binary.",
+      "examples": ["1.0"]
+    },
+    "name": {
+      "type": "string",
+      "pattern": "^[a-z0-9-]{3,64}$",
+      "markdownDescription": "Slug used for the build directory, the X handle suffix, and the deploy target name.\n\nRestricted to `^[a-z0-9-]{3,64}$` because downstream systems (X handles, Vercel / Render project names, DNS) reject anything else.",
+      "examples": ["hello-bot", "x-trend-watcher", "release-notes-bot"]
+    },
+    "description": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 280,
+      "markdownDescription": "One-line summary of the agent. Capped at **280 characters** so a release can be announced in a single X post without truncation.\n\nAlso used as the default content for the pre-deploy X-post safety audit — make it readable.",
+      "examples": [
+        "Posts a daily summary of trending AI topics on X.",
+        "Replies to mentions with project release notes."
+      ]
+    },
+    "build": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["source"],
+      "markdownDescription": "How the agent source code is produced.\n\nSee [docs/build-bridge.md — End-to-end flow](../../docs/build-bridge.md#end-to-end-flow).",
+      "properties": {
+        "source": {
+          "type": "string",
+          "enum": ["grok", "local", "grok-build-cli"],
+          "markdownEnumDescriptions": [
+            "**`grok`** — stream the code directly from Grok. Requires `grok_prompt` and a valid `XAI_API_KEY`.",
+            "**`local`** — skip generation. The bridge expects the entrypoint file to already exist under `generated/<name>/` or next to the YAML.",
+            "**`grok-build-cli`** — shell out to the `grok-build` CLI shipped in the ecosystem. Falls back to `grok` when the binary is absent."
+          ],
+          "markdownDescription": "Where the generated code comes from. Chooses between streaming from Grok, pointing at a pre-existing file, or delegating to the ecosystem CLI.",
+          "examples": ["grok", "local", "grok-build-cli"]
+        },
+        "grok_prompt": {
+          "type": "string",
+          "minLength": 1,
+          "markdownDescription": "Prompt handed to Grok when `source` is `grok` or `grok-build-cli`. Ignored for `local`.\n\nTreat it as a system prompt — be explicit about the file layout, language, and the one thing the agent should do.",
+          "examples": [
+            "Build a Python X bot that posts a daily summary of top AI papers.",
+            "Generate a TypeScript agent that replies to @mentions with project release notes."
+          ]
+        },
+        "language": {
+          "type": "string",
+          "enum": ["python", "typescript", "go"],
+          "default": "python",
+          "markdownEnumDescriptions": [
+            "**`python`** — default. Entrypoint defaults to `main.py`. All static safety checks run.",
+            "**`typescript`** — entrypoint defaults to `index.ts`. Runtime safety checks are limited to secret patterns.",
+            "**`go`** — entrypoint defaults to `main.go`. Runtime safety checks are limited to secret patterns."
+          ],
+          "markdownDescription": "Target language for the generated agent.\n\nEnum-gated so the builder's templates stay honest; new languages need an explicit schema bump.",
+          "examples": ["python", "typescript", "go"]
+        },
+        "entrypoint": {
+          "type": "string",
+          "minLength": 1,
+          "markdownDescription": "Relative path that the runtime executes.\n\nDefault resolved per-language at parse time:\n- `python` → `main.py`\n- `typescript` → `index.ts`\n- `go` → `main.go`",
+          "examples": ["main.py", "index.ts", "src/bot.py"]
+        },
+        "required_tools": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": { "$ref": "#/$defs/ToolName" },
+          "markdownDescription": "Explicit allow-list of xAI tools the agent may invoke.\n\nAnything not listed here is blocked by the safety layer — the bridge denies by default.",
+          "examples": [["x_search"], ["x_search", "web_search"], []]
+        }
+      }
+    },
+    "deploy": {
+      "type": "object",
+      "additionalProperties": false,
+      "markdownDescription": "Where and how the built agent is shipped.\n\nSee [docs/build-bridge.md — Deploying to X](../../docs/build-bridge.md#deploying-to-x).",
+      "properties": {
+        "target": {
+          "type": "string",
+          "enum": ["x", "vercel", "render", "local"],
+          "default": "x",
+          "markdownEnumDescriptions": [
+            "**`x`** — hand off to `grok_install.runtime.deploy_to_x`. Falls back to writing `generated/deploy_payload.json` when the ecosystem is not installed.",
+            "**`vercel`** — run `vercel --prod --yes` in the generated dir. Requires the `vercel` CLI on `PATH`.",
+            "**`render`** — write a `render.yaml` and print git-push instructions. Render deploys happen on the git-repo side.",
+            "**`local`** — print the run command for the generated entrypoint. Great for a `--dry-run` end-to-end test."
+          ],
+          "markdownDescription": "Deployment target.",
+          "examples": ["x", "vercel", "render", "local"]
+        },
+        "runtime": {
+          "type": "string",
+          "minLength": 1,
+          "default": "grok-install",
+          "markdownDescription": "Runtime glue used to deploy.\n\nFree-form string so ecosystem plugins can register new runtimes without a schema bump.",
+          "examples": ["grok-install", "vercel-edge", "render-worker"]
+        },
+        "post_to_x": {
+          "type": "boolean",
+          "default": false,
+          "markdownDescription": "When **`true`**, the agent posts autonomously after deploy.\n\nDefaults to `false` so a dry-run never reaches the public timeline.",
+          "examples": [false, true]
+        },
+        "safety_scan": {
+          "type": "boolean",
+          "default": true,
+          "markdownDescription": "Whether to run the safety pipeline before deploy.\n\nLeave `true` unless you have a very good reason — the bridge's whole value prop is 'safely deployed'.",
+          "examples": [true, false]
+        },
+        "schedule": {
+          "type": "string",
+          "minLength": 1,
+          "markdownDescription": "Optional cron-ish schedule string.\n\nDialects differ by host, so the bridge does not parse this — your chosen runtime (Render, Vercel Cron, etc.) does.",
+          "examples": ["0 */6 * * *", "*/15 * * * *", "0 9 * * 1-5"]
+        }
+      }
+    },
+    "agent": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["model"],
+      "markdownDescription": "Model and persona configuration.",
+      "properties": {
+        "model": { "$ref": "#/$defs/ModelName" },
+        "reasoning_effort": { "$ref": "#/$defs/ReasoningEffort" },
+        "personality": {
+          "type": "string",
+          "maxLength": 500,
+          "markdownDescription": "System-prompt personality snippet.\n\nCapped at **500 characters** to protect the prompt budget and keep the generated agent's voice focused.",
+          "examples": [
+            "wry, terse, vaguely cosmic",
+            "friendly and terse — never uses exclamation marks",
+            "academic but cheerful; cites sources when possible"
+          ]
+        }
+      }
+    },
+    "safety": {
+      "type": "object",
+      "additionalProperties": false,
+      "markdownDescription": "Runtime safety knobs.\n\nOptional because the defaults (audit on, sensible token cap) cover most users.",
+      "properties": {
+        "audit_before_post": {
+          "type": "boolean",
+          "default": true,
+          "markdownDescription": "Run a Grok-in-the-loop audit before publishing any content.\n\n**Defaults to `true`** — turning it off is an explicit, reviewable choice.",
+          "examples": [true, false]
+        },
+        "max_tokens_per_run": {
+          "type": "integer",
+          "minimum": 1000,
+          "maximum": 200000,
+          "default": 8000,
+          "markdownDescription": "Ceiling on xAI tokens per single bridge run.\n\nBounded to `[1000, 200000]` so a runaway loop cannot burn the monthly budget. Raise it for heavy code-gen runs; lower it for tight CI budgets.",
+          "examples": [2000, 8000, 50000]
+        },
+        "lucas_veto_enabled": {
+          "type": "boolean",
+          "default": false,
+          "markdownDescription": "Enable the **Lucas veto** gate.\n\nThe Orchestra project wires this up as a hard-stop on unsafe output. In Bridge it stays off by default to avoid a hard dependency on Orchestra.",
+          "examples": [false, true]
+        }
+      }
+    }
+  }
+}

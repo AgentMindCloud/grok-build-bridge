@@ -1,0 +1,104 @@
+{
+  "Minimal bridge YAML": {
+    "prefix": "bridge-min",
+    "scope": "yaml",
+    "description": "Smallest valid Grok Build Bridge YAML — `source: local`, deploys to local, safe for a dry run.",
+    "body": [
+      "version: \"1.0\"",
+      "name: ${1:my-bridge}",
+      "description: ${2:One-line summary of what this agent does.}",
+      "",
+      "build:",
+      "  source: local",
+      "  language: ${3|python,typescript,go|}",
+      "  entrypoint: ${4:main.py}",
+      "",
+      "deploy:",
+      "  target: ${5|local,x,vercel,render|}",
+      "",
+      "agent:",
+      "  model: ${6|grok-4.20-0309,grok-4.20-multi-agent-0309|}",
+      "$0"
+    ]
+  },
+  "X trend analyzer skeleton": {
+    "prefix": "bridge-x-trend",
+    "scope": "yaml",
+    "description": "Skeleton for an X trend-analyzer agent: pulls trends via x_search, drafts posts, deploys to X with audit on.",
+    "body": [
+      "version: \"1.0\"",
+      "name: ${1:x-trend-watcher}",
+      "description: ${2:Daily post summarising the top trending AI topics on X.}",
+      "",
+      "build:",
+      "  source: grok",
+      "  grok_prompt: |",
+      "    ${3:Build a Python X bot that:",
+      "      - pulls the top 5 AI-related trends via x_search,",
+      "      - summarises each in one sentence,",
+      "      - composes a single thread, and",
+      "      - calls the X API to post once per day at 09:00 UTC.}",
+      "  language: python",
+      "  entrypoint: main.py",
+      "  required_tools:",
+      "    - x_search",
+      "    - web_search",
+      "",
+      "deploy:",
+      "  target: x",
+      "  post_to_x: true",
+      "  schedule: \"0 9 * * *\"",
+      "",
+      "agent:",
+      "  model: grok-4.20-0309",
+      "  reasoning_effort: medium",
+      "  personality: ${4:neutral, factual, cites sources}",
+      "",
+      "safety:",
+      "  audit_before_post: true",
+      "  max_tokens_per_run: ${5:12000}",
+      "$0"
+    ]
+  },
+  "Grok source block": {
+    "prefix": "bridge-grok-source",
+    "scope": "yaml",
+    "description": "`build:` block that streams code from Grok. Use when the agent will be generated fresh on every run.",
+    "body": [
+      "build:",
+      "  source: grok",
+      "  grok_prompt: |",
+      "    ${1:Describe exactly what the agent should do, which files it should",
+      "    produce, and any constraints. One code block, one file, runnable.}",
+      "  language: ${2|python,typescript,go|}",
+      "  entrypoint: ${3:main.py}",
+      "  required_tools:",
+      "    - ${4|x_search,web_search,code_execution|}",
+      "$0"
+    ]
+  },
+  "Local source block": {
+    "prefix": "bridge-local-source",
+    "scope": "yaml",
+    "description": "`build:` block that uses a pre-existing file next to the YAML. No Grok call, no API key needed.",
+    "body": [
+      "build:",
+      "  source: local",
+      "  language: ${1|python,typescript,go|}",
+      "  entrypoint: ${2:main.py}",
+      "$0"
+    ]
+  },
+  "Full safety block": {
+    "prefix": "bridge-safety",
+    "scope": "yaml",
+    "description": "`safety:` block with every flag set explicitly. Good for auditing or committing an intentional policy.",
+    "body": [
+      "safety:",
+      "  audit_before_post: ${1|true,false|}",
+      "  max_tokens_per_run: ${2:8000}",
+      "  lucas_veto_enabled: ${3|false,true|}",
+      "$0"
+    ]
+  }
+}
