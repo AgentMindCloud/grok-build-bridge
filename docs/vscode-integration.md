@@ -41,13 +41,13 @@ Reload the window once and you are done.
 ## 3. Create a bridge YAML
 
 Open VS Code in the repo, create a file named `grok-build-bridge.yaml`
-(or anything matching `*.bridge.yaml`), type `bridge-min`, and press <kbd>Tab</kbd>:
+(or anything matching `*.bridge.yaml`), type `bridge-min`, and press <kbd>Tab</kbd>.
 
-![bridge-min snippet expanding into a minimal bridge YAML](./assets/vscode-bridge-min.png)
-
-The snippet fills in a minimal valid document, parks your cursor on the
-`name:` placeholder, and offers a multiple-choice dropdown on the
-`language:` and `model:` fields.
+> **Expected:** the snippet fills in a minimal valid document, parks your
+> cursor on the `name:` placeholder, and offers multiple-choice dropdowns
+> on the `language:`, `source:`, and `model:` fields. A screenshot GIF
+> lives in the `docs/assets/` directory once the extension packaging PR
+> lands (tracked in [`ROADMAP.md`](../ROADMAP.md) under week 1).
 
 ## 4. IntelliSense you should see
 
