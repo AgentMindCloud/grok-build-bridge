@@ -1,1 +1,168 @@
-{}
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://agentmind.cloud/grok-build-bridge/bridge.schema.json",
+  "title": "Grok Build Bridge configuration",
+  "description": "Strict schema for a bridge.yaml document. Every field exists to keep generated agents deterministic, auditable, and cheap to reproduce across CI runs.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["version", "name", "description", "build", "deploy", "agent"],
+  "properties": {
+    "version": {
+      "description": "Schema version. Pinned to an enum so a future v1.1/v2 cannot be silently consumed by an older bridge binary.",
+      "type": "string",
+      "enum": ["1.0"]
+    },
+    "name": {
+      "description": "Slug used for the build directory, the X handle suffix, and the deploy target name. Restricted to DNS/slug-safe characters because downstream systems (Vercel/Render/X) reject anything else.",
+      "type": "string",
+      "pattern": "^[a-z0-9-]{3,64}$"
+    },
+    "description": {
+      "description": "Human-readable summary. Capped at 280 characters so a release can be announced in a single X post without truncation.",
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 280
+    },
+    "build": {
+      "description": "How the agent source is produced.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["source"],
+      "properties": {
+        "source": {
+          "description": "Where the code comes from. `local` reads an existing tree; `grok` calls xAI; `grok-build-cli` shells out to the ecosystem CLI.",
+          "type": "string",
+          "enum": ["grok", "local", "grok-build-cli"]
+        },
+        "grok_prompt": {
+          "description": "Prompt handed to Grok when `source` is `grok` or `grok-build-cli`. Required there, optional for `local`; cross-field enforcement lives in `allOf`.",
+          "type": "string",
+          "minLength": 1
+        },
+        "language": {
+          "description": "Target language for the generated agent. Enum keeps the builder's templates honest; new languages need an explicit schema bump.",
+          "type": "string",
+          "enum": ["python", "typescript", "go"],
+          "default": "python"
+        },
+        "entrypoint": {
+          "description": "Relative path that the runtime executes. Default is resolved language-by-language by the parser because JSON Schema cannot express a cross-field default.",
+          "type": "string",
+          "minLength": 1
+        },
+        "required_tools": {
+          "description": "xAI tools the agent is allowed to call. Explicit allow-list so the safety layer can deny everything else by default.",
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "enum": ["x_search", "web_search", "code_execution"]
+          }
+        }
+      }
+    },
+    "deploy": {
+      "description": "Where and how the built agent is shipped.",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "target": {
+          "description": "Deployment target. `x` hands off to grok-install's `deploy_to_x`; the others are glue for non-X hosts.",
+          "type": "string",
+          "enum": ["x", "vercel", "render", "local"],
+          "default": "x"
+        },
+        "runtime": {
+          "description": "Runtime glue used to deploy. Kept as a free-form string so ecosystem plugins can register new runtimes without schema churn.",
+          "type": "string",
+          "minLength": 1,
+          "default": "grok-install"
+        },
+        "post_to_x": {
+          "description": "If true, the agent will post autonomously after deploy. Defaults to false so dry-runs never reach the public timeline.",
+          "type": "boolean",
+          "default": false
+        },
+        "safety_scan": {
+          "description": "Whether to run the safety pipeline before deploy. Defaults to true; turning it off should be an explicit, reviewable choice.",
+          "type": "boolean",
+          "default": true
+        },
+        "schedule": {
+          "description": "Optional cron-ish schedule string. Not validated as a cron expression here because dialects vary across hosts; the chosen runtime validates it.",
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "agent": {
+      "description": "Agent/model configuration.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["model"],
+      "properties": {
+        "model": {
+          "description": "Grok model id. Enum pinned to the models the Bridge has been tested against so a typo (e.g. 'grok-4') fails fast.",
+          "type": "string",
+          "enum": ["grok-4.20-0309", "grok-4.20-multi-agent-0309"]
+        },
+        "reasoning_effort": {
+          "description": "Reasoning budget dial. Mirrors the xAI API's `reasoning_effort` so the parser can pass it through unchanged.",
+          "type": "string",
+          "enum": ["low", "medium", "high", "xhigh"],
+          "default": "medium"
+        },
+        "personality": {
+          "description": "System-prompt personality snippet. Capped at 500 characters to protect the prompt budget and keep the generated agent's voice focused.",
+          "type": "string",
+          "maxLength": 500
+        }
+      }
+    },
+    "safety": {
+      "description": "Runtime safety knobs. Optional because sensible defaults should cover most users.",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "audit_before_post": {
+          "description": "Run a Grok-in-the-loop audit before publishing any content. On by default because the Bridge's whole value prop is 'safely deployed'.",
+          "type": "boolean",
+          "default": true
+        },
+        "max_tokens_per_run": {
+          "description": "Ceiling on tokens per single bridge run. Bounded so a runaway loop cannot burn the xAI budget. Min/max chosen to cover real agents without enabling abuse.",
+          "type": "integer",
+          "minimum": 1000,
+          "maximum": 200000,
+          "default": 8000
+        },
+        "lucas_veto_enabled": {
+          "description": "Enable the Lucas veto gate. The Orchestra project wires this up; in the Bridge it stays off by default to avoid a hard dependency on Orchestra.",
+          "type": "boolean",
+          "default": false
+        }
+      }
+    }
+  },
+  "allOf": [
+    {
+      "description": "grok_prompt is mandatory whenever the build `source` is backed by Grok.",
+      "if": {
+        "properties": {
+          "build": {
+            "properties": {
+              "source": { "enum": ["grok", "grok-build-cli"] }
+            },
+            "required": ["source"]
+          }
+        },
+        "required": ["build"]
+      },
+      "then": {
+        "properties": {
+          "build": { "required": ["source", "grok_prompt"] }
+        }
+      }
+    }
+  ]
+}
