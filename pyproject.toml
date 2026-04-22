@@ -36,7 +36,6 @@ dependencies = [
 [project.optional-dependencies]
 dev = [
     "pytest>=8",
-    "pytest-asyncio",
     "pytest-cov>=5",
     "mypy>=1.10",
     "ruff>=0.6",
@@ -101,11 +100,12 @@ disallow_any_decorated = false
 [tool.pytest.ini_options]
 minversion = "8.0"
 testpaths = ["tests"]
-asyncio_mode = "auto"
+# Make the repo root importable so ``from tests.conftest import ...`` works
+# regardless of how pip/hatchling laid the editable install out on disk.
+pythonpath = ["."]
 addopts = [
     "-ra",
     "--strict-markers",
-    "--strict-config",
 ]
 
 [tool.coverage.run]

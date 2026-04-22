@@ -68,9 +68,15 @@ jobs:
           python -m pip install --upgrade pip
           pip install -e ".[dev]"
 
+      - name: Record resolved dependency versions
+        # Printed unconditionally so any future "works locally / fails in CI"
+        # version drift is visible on the first line of the log.
+        run: pip freeze
+
       - name: Run pytest with coverage
         run: |
-          pytest --cov=grok_build_bridge --cov-report=xml --cov-report=term \
+          pytest -v --tb=short --cov=grok_build_bridge \
+                 --cov-report=xml --cov-report=term \
                  --cov-fail-under=85
 
       - name: Upload coverage to Codecov
