@@ -9,7 +9,7 @@
 [![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-blue.svg)](https://www.python.org/downloads/)
 [![Built for Grok 4.20](https://img.shields.io/badge/built%20for-Grok%204.20-0ea5e9.svg)](https://x.ai)
 [![xAI aligned](https://img.shields.io/badge/xAI-aligned-7c3aed.svg)](https://x.ai)
-[![Coverage](https://img.shields.io/badge/coverage-90%25-brightgreen.svg)](#)
+[![Coverage](https://img.shields.io/badge/coverage-90%25-brightgreen.svg)](#) <!-- TODO: verify still accurate — CI gate is 85% in .github/workflows/ci.yml -->
 
 **One YAML. Grok builds it. Safely on X.**
 
@@ -105,24 +105,53 @@ flowchart LR
 ```
 
 - **Phase 1 — Parse:** strict Draft 2020-12 schema, defaults filled, result frozen.
-- **Phase 2 — Generate:** streams `grok-4.20-0309` via the official `xai-sdk`, extracts a fenced code block, writes `bridge.manifest.json`.
+- **Phase 2 — Generate:** streams `grok-4.20-0309` via the official `xai-sdk`, extracts a fenced code block, writes `bridge.manifest.json` (name, model, prompt sha-256, token estimate, file list).
 - **Phase 3 — Safety:** regex-driven static sweep + a JSON-mode Grok audit, merged into one `SafetyReport`.
-- **Phase 4 — Deploy:** dispatches on `deploy.target` — `x` (via `grok_install.runtime.deploy_to_x`), `vercel`, `render`, or `local`. X-bound posts get a pre-flight `audit_x_post`.
+- **Phase 4 — Deploy:** dispatches on `deploy.target` — `x` (via `grok_install.runtime.deploy_to_x`, or a dry-run stub that writes `generated/deploy_payload.json` when the ecosystem package is absent), `vercel` (shells out to `vercel --prod --yes`), `render` (writes a minimal `render.yaml`), or `local` (prints the run command). X-bound posts get a pre-flight `audit_x_post`.
 - **Phase 5 — Summary:** a green Rich panel with the generated path, safety verdict, deploy URL, duration, and token estimate.
+
+Transient xAI failures (rate limits, connection resets, timeouts) are retried under tenacity — 3 attempts, exponential backoff clamped to 2–16 s — and a `ToolExecutionError` retries once with tools disabled before it surfaces.
+
+## CLI
+
+Five commands. Every failure path prints a branded Rich panel with a "What to try next" list and exits with a typed code so scripts can react.
+
+| Command | What it does |
+| --- | --- |
+| `grok-build-bridge run <file.yaml>` | Full pipeline. Flags: `--dry-run`, `--force` (bypass safety block), `--verbose/-v`. |
+| `grok-build-bridge validate <file.yaml>` | Parse, schema-validate, apply defaults, and pretty-print the resolved config — no network. |
+| `grok-build-bridge templates` | List bundled templates with description, required env, estimated tokens, and categories. |
+| `grok-build-bridge init <slug>` | Copy a bundled template to `--out/-o` (default: cwd). `--force` skips the overwrite prompt. |
+| `grok-build-bridge version` | Print grok-build-bridge / xai-sdk / python versions. |
+
+Global flags: `--version/-V`, `--no-color` (also honours `NO_COLOR`).
+
+Exit codes: `2` config error · `3` runtime error · `4` safety block.
+
+### Environment
+
+| Var | Used for |
+| --- | --- |
+| `XAI_API_KEY` | Every Grok call (build + safety + X-post audit). |
+| `X_BEARER_TOKEN` | Deploys with `deploy.target: x`. |
+| `GROK_INSTALL_HOME` | Optional — path to a local `grok-install-ecosystem` checkout for the `deploy_to_x` bridge. |
+
+See [`.env.example`](.env.example).
 
 ## Templates
 
-`grok-build-bridge templates` lists the five certified templates that ship in the wheel:
+`grok-build-bridge templates` lists the six certified templates that ship in the wheel:
 
 | Slug | What it does | Source mode | Required env |
 | --- | --- | --- | --- |
+| [`hello-bot`](grok_build_bridge/templates/hello-bot/bridge.yaml) | Smallest local-source agent — greets stdout and exits. Use it as the first bridge smoke test. | `local` | — |
 | [`x-trend-analyzer`](grok_build_bridge/templates/x-trend-analyzer.yaml) | Every 6 hours → one thread summarising the top 5 trends with primary-source citations. | `grok` | `XAI_API_KEY`, `X_BEARER_TOKEN` |
 | [`truthseeker-daily`](grok_build_bridge/templates/truthseeker-daily.yaml) | Daily fact-check of the 3 most-discussed threads in a domain, with a calibration note. | `grok` | `XAI_API_KEY`, `X_BEARER_TOKEN` |
 | [`code-explainer-bot`](grok_build_bridge/templates/code-explainer-bot.yaml) | Point at a Python repo via `$TARGET_REPO` → plain-English explainer thread. | `local` | `TARGET_REPO`, `XAI_API_KEY`, `X_BEARER_TOKEN` |
 | [`grok-build-coding-agent`](grok_build_bridge/templates/grok-build-coding-agent.yaml) | Tiny TypeScript CLI via the `grok-build-cli` → `grok` fallback chain. | `grok-build-cli` | `XAI_API_KEY` |
 | [`research-thread-weekly`](grok_build_bridge/templates/research-thread-weekly.yaml) | Weekly deep-research: 5 parallel queries + web verification → one authoritative thread. | `grok` | `XAI_API_KEY`, `X_BEARER_TOKEN` |
 
-Scaffold any of them with `grok-build-bridge init <slug>`.
+Scaffold any of them with `grok-build-bridge init <slug>`. A standalone end-to-end example lives at [`examples/hello.yaml`](examples/hello.yaml) + [`examples/hello-bridge/main.py`](examples/hello-bridge/main.py).
 
 ## Safety
 
