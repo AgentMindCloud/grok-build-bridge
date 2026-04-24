@@ -4,8 +4,9 @@ Eight tweets. Each fits inside 270 chars (headroom vs. X's 280 cap so link
 auto-shortening and emoji variance can't push any tweet over).
 
 **How to post:** native thread from `@AgentMindCloud`, 30s gap between
-tweets, attach `docs/assets/bridge-demo.gif` to tweet 1 only, don't
-quote-tweet yourself between them.
+tweets, attach `docs/assets/bridge-demo.gif` to tweet 1 only (record it
+first — see `launch/seven-day-shipping-plan.md` Day 2; the repo does
+**not** ship a pre-made GIF), don't quote-tweet yourself between them.
 
 **Only the content inside each blockquote below is tweet text.** Lines
 prefixed with _media:_ / _alt:_ etc. are post-time instructions.
