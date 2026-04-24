@@ -8,6 +8,7 @@ safety scan path that Session 4 already covers.
 
 from __future__ import annotations
 
+import re
 from collections.abc import Iterator
 from pathlib import Path
 from typing import Any
@@ -19,16 +20,26 @@ from grok_build_bridge.cli import app
 
 runner = CliRunner()
 
+# Typer's Rich-rendered help wraps option names like ``--dry-run`` in ANSI
+# colour spans whose splits depend on terminal width and Rich version
+# (locally one span, on GitHub's runners two: ``-`` then ``-dry-run``).
+# Strip the ANSI in the test helper so substring checks are colour-agnostic.
+_ANSI_RE: re.Pattern[str] = re.compile(r"\x1b\[[0-9;?]*[A-Za-z]")
+
 
 def _combined_output(result: Any) -> str:
-    """Return stdout + stderr together — newer click splits them, our
-    Rich console writes to stderr, so tests need both."""
+    """Return stdout + stderr together with ANSI escape codes stripped.
+
+    Newer click splits the two streams, our Rich console writes to stderr,
+    and Typer's Rich help inserts colour codes mid-token — flatten all of
+    that into a plain string so tests can do simple substring assertions.
+    """
     parts = [getattr(result, "output", "") or ""]
     try:
         parts.append(result.stderr or "")
     except (AttributeError, ValueError):
         pass
-    return "".join(parts)
+    return _ANSI_RE.sub("", "".join(parts))
 
 
 # ---------------------------------------------------------------------------
