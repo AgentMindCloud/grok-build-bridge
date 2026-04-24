@@ -20,7 +20,7 @@
 </p>
 
 <p align="center">
-  <a href="https://pypi.org/project/grok-build-bridge/"><img src="https://img.shields.io/pypi/v/grok-build-bridge.svg?style=for-the-badge&color=00E5FF&labelColor=0A0D14" /></a>
+  <img src="https://img.shields.io/badge/PyPI%20Pending-00E5FF?style=for-the-badge&logoColor=001018&labelColor=0A0D14" />
   <a href="LICENSE"><img src="https://img.shields.io/badge/Apache%202.0-7C3AED?style=for-the-badge&logoColor=FFFFFF&labelColor=0A0D14" /></a>
   <a href="https://www.python.org/downloads/"><img src="https://img.shields.io/badge/Python%203.10+-FF4FD8?style=for-the-badge&logo=python&logoColor=FFFFFF&labelColor=0A0D14" /></a>
   <a href="https://x.ai"><img src="https://img.shields.io/badge/Grok%204.20-00D5FF?style=for-the-badge&logoColor=001018&labelColor=0A0D14" /></a>
@@ -29,7 +29,41 @@
 </p>
 
 <p align="center">
-  <img src="docs/assets/bridge-demo.gif" alt="grok-build-bridge demo — one YAML, one command, deployed X agent" width="720" />
+
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 300" width="720">
+  <rect width="720" height="300" fill="#0A0D14" rx="10"/>
+  <rect width="720" height="32" fill="#0F1420" rx="10"/>
+  <rect y="24" width="720" height="8" fill="#0F1420"/>
+  <circle cx="16" cy="16" r="5" fill="#FF5F56"/>
+  <circle cx="36" cy="16" r="5" fill="#FFBD2E"/>
+  <circle cx="56" cy="16" r="5" fill="#27C93F"/>
+  <text x="320" y="21" fill="#8899A6" font-family="monospace" font-size="12">zsh · grok-build-bridge</text>
+  <text x="24" y="70" fill="#00E5FF" font-family="monospace" font-size="14">$</text>
+  <text x="44" y="70" fill="#EAF8FF" font-family="monospace" font-size="14">grok-build-bridge run bridge.yaml</text>
+  <line x1="24" y1="86" x2="696" y2="86" stroke="#556677" stroke-opacity="0.3"/>
+  <text x="24" y="112" fill="#00E5FF" font-family="monospace" font-size="12" font-weight="700">▸ phase 1</text>
+  <text x="108" y="112" fill="#EAF8FF" font-family="monospace" font-size="12">parse · validate YAML</text>
+  <text x="640" y="112" fill="#27C93F" font-family="monospace" font-size="11" font-weight="700">✓ 0.02s</text>
+  <text x="24" y="136" fill="#7C3AED" font-family="monospace" font-size="12" font-weight="700">▸ phase 2</text>
+  <text x="108" y="136" fill="#EAF8FF" font-family="monospace" font-size="12">generate · grok-4.20-0309</text>
+  <rect x="380" y="126" width="180" height="12" fill="#12161F" stroke="#7C3AED" stroke-opacity="0.4" rx="2"/>
+  <rect x="380" y="126" width="180" height="12" fill="#7C3AED" fill-opacity="0.5"><animate attributeName="width" values="0;180" dur="2s" repeatCount="indefinite"/></rect>
+  <text x="640" y="136" fill="#7C3AED" font-family="monospace" font-size="11" font-weight="700">17.4k tok</text>
+  <text x="24" y="160" fill="#FF4FD8" font-family="monospace" font-size="12" font-weight="700">▸ phase 3</text>
+  <text x="108" y="160" fill="#EAF8FF" font-family="monospace" font-size="12">safety scan · static + grok audit</text>
+  <text x="640" y="160" fill="#27C93F" font-family="monospace" font-size="11" font-weight="700">✓ SAFE</text>
+  <text x="24" y="184" fill="#00D5FF" font-family="monospace" font-size="12" font-weight="700">▸ phase 4</text>
+  <text x="108" y="184" fill="#EAF8FF" font-family="monospace" font-size="12">deploy · target=x · schedule=0 */6 * * *</text>
+  <text x="640" y="184" fill="#27C93F" font-family="monospace" font-size="11" font-weight="700">✓ LIVE</text>
+  <text x="24" y="208" fill="#5EF2FF" font-family="monospace" font-size="12" font-weight="700">▸ phase 5</text>
+  <text x="108" y="208" fill="#EAF8FF" font-family="monospace" font-size="12">BridgeResult</text>
+  <text x="640" y="208" fill="#27C93F" font-family="monospace" font-size="11" font-weight="700">✓ 42.7s</text>
+  <line x1="24" y1="228" x2="696" y2="228" stroke="#556677" stroke-opacity="0.3"/>
+  <rect x="24" y="244" width="672" height="40" fill="#27C93F" fill-opacity="0.1" stroke="#27C93F" stroke-opacity="0.5" rx="4"/>
+  <text x="40" y="269" fill="#27C93F" font-family="monospace" font-size="13" font-weight="700">✅ BRIDGE COMPLETE</text>
+  <text x="220" y="269" fill="#EAF8FF" font-family="monospace" font-size="11">x-trend-analyzer · deployed to X · audit = passed · tokens = 17,412</text>
+</svg>
+
 </p>
 
 <p align="center">
