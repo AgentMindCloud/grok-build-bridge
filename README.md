@@ -244,6 +244,14 @@ The full pipeline executes in **~40 seconds** for a typical agent. Every edge ab
 
 Bottom line: **what used to take a week of glue code, manual safety review, and brittle deploy scripts collapses to a single YAML file and a 40-second pipeline.**
 
+### ✦ Why Teams Choose Grok Build Bridge
+
+- 🛡️ **Safety is a build-time gate, not a post-mortem.** Two independent audits — static regex/AST and a Grok-in-the-loop LLM review — fire on every run and **fail closed**. Bad code never reaches X.
+- 🎭 **Orchestra-native by design.** `safety.lucas_veto_enabled: true` is the only line you need to wire a multi-agent Lucas veto into the deploy gate. The verdict from an Orchestra debate sits *in front of* the Bridge audit — two reviewers, two failure modes, one durable contract.
+- 🚀 **One YAML, four destinations.** The same spec ships to `x`, `vercel`, `render`, or `local` with a single `deploy.target` switch. No per-host glue, no rewrites when you migrate.
+- 📐 **Reproducible by construction.** Every build emits a `bridge.manifest.json` pinning model · prompt SHA-256 · token estimate · file list. Audits are traceable; releases are bit-for-bit comparable; rollbacks are trivial.
+- 🤝 **xAI-aligned, not bolted-on.** Built directly on the official `xai-sdk` against `grok-4.20-0309`. No screen-scraping, no reverse-engineered endpoints, no surprise breakage on the next model release.
+
 ## ✦ CLI
 
 Five commands. Every failure path prints a branded Rich panel with a "What to try next" list and exits with a typed code so scripts can react.
@@ -433,6 +441,14 @@ Apache 2.0 — see [`LICENSE`](LICENSE). Copyright © 2026 Jan Solo / AgentMindC
 - The **xAI team** for Grok 4.20 and the official `xai-sdk` Python client.
 - The **`grok-install-ecosystem`** community for the `deploy_to_x` glue Bridge builds on.
 - Every early user who filed a good bug report. Threads are a finite resource — thanks for spending one on us.
+
+## ✦ Quick Links
+
+- 🎭 **[grok-agent-orchestra](https://github.com/agentmindcloud/grok-agent-orchestra)** — multi-agent debate + Lucas veto, the upstream half of this pipeline.
+- 📦 **[grok-install](https://github.com/agentmindcloud/grok-install)** — universal YAML spec for declarative agents; the runtime Bridge hands off to.
+- 📚 **[Documentation](docs/)** — `build-bridge.md`, `vscode-integration.md` (full docs site coming soon).
+- 💬 **Discord** — _coming soon._ Announcements via [@JanSol0s](https://x.com/JanSol0s) until the server opens.
+- 🐦 **[X / @JanSol0s](https://x.com/JanSol0s)** — release notes, demos, support.
 
 <p align="center">
   <img src="https://capsule-render.vercel.app/api?type=waving&height=120&section=footer&color=0:00E5FF,50:7C3AED,100:FF4FD8" width="100%" />
