@@ -205,6 +205,45 @@ flowchart LR
 
 **Resilience:** transient xAI failures (rate limits, connection resets, timeouts) are retried under tenacity — 3 attempts, exponential backoff clamped to 2–16 s. `ToolExecutionError` retries once with tools disabled before surfacing.
 
+### ✦ End-to-End Flow
+
+```mermaid
+flowchart LR
+    classDef parse  fill:#00E5FF,stroke:#0A0D14,color:#0A0D14,font-weight:bold
+    classDef gen    fill:#7C3AED,stroke:#0A0D14,color:#FFFFFF,font-weight:bold
+    classDef safety fill:#FF4FD8,stroke:#0A0D14,color:#FFFFFF,font-weight:bold
+    classDef deploy fill:#00D5FF,stroke:#0A0D14,color:#0A0D14,font-weight:bold
+    classDef result fill:#27C93F,stroke:#0A0D14,color:#0A0D14,font-weight:bold
+    classDef block  fill:#FF5F56,stroke:#0A0D14,color:#FFFFFF,font-weight:bold
+
+    Y([📥 bridge.yaml]) --> A
+    A["📄 Phase 1 · Parse<br/>schema validate · defaults · freeze"]:::parse --> B
+    B["🎯 Phase 2 · Generate<br/>grok-4.20-0309 via xai-sdk<br/>writes bridge.manifest.json"]:::gen --> C
+    C{"🛡️ Phase 3 · Safety<br/>static regex + Grok LLM audit"}:::safety
+    C -->|"safe ✓"| D["🚀 Phase 4 · Deploy<br/>x · vercel · render · local"]:::deploy
+    C -->|"unsafe ✗"| BLK["🚫 Block<br/>exit code 4"]:::block
+    D --> E([✅ Phase 5 · BridgeResult<br/>path · verdict · URL · cost · duration]):::result
+    BLK -. "--force override" .-> D
+```
+
+The full pipeline executes in **~40 seconds** for a typical agent. Every edge above is enforced by typed contracts — a phase cannot silently skip the next.
+
+### ✦ Before vs After
+
+| Aspect | Before Bridge | After Bridge |
+| --- | --- | --- |
+| ⏱️ **Time to first deploy** | Days — write the code, hand-roll deploy scripts, debug X auth, wire cron. | Minutes — `grok-build-bridge run bridge.yaml`. |
+| 📄 **Configuration** | Many files: source, deploy script, cron, secrets, retry glue. | One YAML, schema-validated, defaults filled, frozen at parse time. |
+| 🛡️ **Safety review** | Manual code reading, or skipped under deadline pressure. | Two-layer audit (static regex + Grok LLM) on every run. **Fails closed.** |
+| 🚀 **Multi-target deploy** | Rewrite glue per host (X / Vercel / Render / local). | One `deploy.target` switch. Same agent, four destinations. |
+| 💰 **Cost ceiling** | Unbounded — a runaway loop drains the xAI budget overnight. | `safety.max_tokens_per_run` caps every run; bridge aborts before overspend. |
+| 🔁 **Iteration loop** | Slow — full deploy required to test changes. | `--dry-run` exercises parse → generate → safety without touching prod. |
+| ✅ **Reproducibility** | "Works on my laptop" — model + prompt drift between runs. | `bridge.manifest.json` pins model · prompt SHA-256 · token estimate · file list. |
+| 🚨 **Failure modes** | Stack traces, broken deploys, posted bugs that need takedown. | Branded panels + typed exit codes (`2` config · `3` runtime · `4` safety). Nothing reaches X on failure. |
+| 🎼 **Orchestra / Lucas integration** | Custom glue per project, brittle, no audit trail. | `safety.lucas_veto_enabled: true` — one line, durable, reviewable. |
+
+Bottom line: **what used to take a week of glue code, manual safety review, and brittle deploy scripts collapses to a single YAML file and a 40-second pipeline.**
+
 ## ✦ CLI
 
 Five commands. Every failure path prints a branded Rich panel with a "What to try next" list and exits with a typed code so scripts can react.
