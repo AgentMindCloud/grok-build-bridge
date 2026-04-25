@@ -1,0 +1,686 @@
+<!DOCTYPE html>
+<html lang="en" class="dark scroll-smooth">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="color-scheme" content="dark" />
+  <title>Grok Build Bridge — production-ready X agents from Grok 4.20</title>
+  <meta name="description" content="One YAML turns any Grok 4.20 code into a production-ready, safety-audited X agent. Two-layer safety audit, multi-target deploy, Orchestra-ready." />
+  <meta property="og:title" content="Grok Build Bridge" />
+  <meta property="og:description" content="Production-ready X agents from a single YAML. Two-layer safety audit. Lucas veto integration." />
+  <meta property="og:type" content="website" />
+  <meta name="theme-color" content="#0A0D14" />
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet" />
+
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            ink:  { 950: '#0A0D14', 900: '#0F1420', 850: '#10141C', 800: '#12161F', 700: '#1A2030' },
+            neon: {
+              cyan:   '#00E5FF',
+              cyan2:  '#00D5FF',
+              cyan3:  '#5EF2FF',
+              purple: '#7C3AED',
+              purple2:'#9D4EDD',
+              pink:   '#FF4FD8',
+              green:  '#27C93F',
+              red:    '#FF5F56',
+              amber:  '#FFBD2E',
+            },
+          },
+          fontFamily: {
+            sans:    ['Inter', 'system-ui', 'sans-serif'],
+            display: ['"Space Grotesk"', 'Inter', 'sans-serif'],
+            mono:    ['"JetBrains Mono"', 'ui-monospace', 'SFMono-Regular', 'monospace'],
+          },
+          boxShadow: {
+            'glow-cyan':   '0 0 60px -10px rgba(0,229,255,.45)',
+            'glow-purple': '0 0 60px -10px rgba(124,58,237,.45)',
+            'glow-pink':   '0 0 60px -10px rgba(255,79,216,.45)',
+          },
+        },
+      },
+    };
+  </script>
+
+  <style>
+    /* Layered radial gradients give the page a warm cyberpunk depth without an image. */
+    body {
+      background-color: #0A0D14;
+      background-image:
+        radial-gradient(1200px 800px at 18% -5%, rgba(124, 58, 237, 0.20), transparent 60%),
+        radial-gradient(1000px 700px at 82% 8%, rgba(0, 229, 255, 0.14), transparent 60%),
+        radial-gradient(900px 600px at 50% 110%, rgba(255, 79, 216, 0.12), transparent 60%);
+    }
+
+    /* Subtle grid backdrop, fades out beyond the viewport. */
+    .bg-grid {
+      background-image:
+        linear-gradient(to right,  rgba(255,255,255,0.03) 1px, transparent 1px),
+        linear-gradient(to bottom, rgba(255,255,255,0.03) 1px, transparent 1px);
+      background-size: 56px 56px;
+      mask-image: radial-gradient(ellipse at center, black 30%, transparent 75%);
+      -webkit-mask-image: radial-gradient(ellipse at center, black 30%, transparent 75%);
+    }
+
+    /* Reusable text glow utilities. */
+    .glow-cyan   { text-shadow: 0 0 24px rgba(0, 229, 255, 0.55); }
+    .glow-purple { text-shadow: 0 0 24px rgba(124, 58, 237, 0.55); }
+    .glow-pink   { text-shadow: 0 0 24px rgba(255, 79, 216, 0.55); }
+
+    /* Card hover lift. */
+    .card { transition: transform .3s ease, box-shadow .3s ease, border-color .3s ease; }
+    .card:hover { transform: translateY(-2px); border-color: rgba(0,229,255,0.35); }
+
+    /* Live ping indicator (used by the status section). */
+    @keyframes ping-soft {
+      0%   { transform: scale(1);   opacity: .9; }
+      75%  { transform: scale(2.4); opacity:  0; }
+      100% { transform: scale(2.4); opacity:  0; }
+    }
+    .live-dot { position: relative; }
+    .live-dot::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      border-radius: 9999px;
+      background: #27C93F;
+      animation: ping-soft 1.8s cubic-bezier(0,0,.2,1) infinite;
+    }
+
+    /* Carousel snap. */
+    .snap-carousel { scroll-snap-type: x mandatory; -ms-overflow-style: none; scrollbar-width: none; }
+    .snap-carousel::-webkit-scrollbar { display: none; }
+    .snap-carousel > * { scroll-snap-align: start; }
+
+    /* Hand-drawn arrow between phase cards (pure CSS). */
+    .phase-arrow::after {
+      content: '→';
+      position: absolute;
+      right: -1.25rem;
+      top: 50%;
+      transform: translateY(-50%);
+      color: rgba(0,229,255,0.4);
+      font-weight: 700;
+      font-size: 1.25rem;
+    }
+    @media (max-width: 768px) {
+      .phase-arrow::after { content: '↓'; right: 50%; top: auto; bottom: -1.5rem; transform: translateX(50%); }
+    }
+
+    /* Fine focus rings for keyboard users. */
+    a:focus-visible, button:focus-visible {
+      outline: 2px solid #00E5FF;
+      outline-offset: 3px;
+      border-radius: 6px;
+    }
+  </style>
+</head>
+
+<body class="font-sans text-zinc-200 antialiased min-h-screen">
+
+  <!-- =====================================================================
+       Section anchors are added incrementally in subsequent steps:
+         #top         (header + hero)
+         #status      (live status dashboard)
+         #templates   (featured templates carousel)
+         #how         (5-phase mini flow)
+         #orchestra   (Orchestra integration)
+         #footer      (links)
+       ===================================================================== -->
+
+  <!-- ============================================================
+       Header — sticky, blurred, with section anchors.
+       ============================================================ -->
+  <header class="sticky top-0 z-40 border-b border-white/5 bg-ink-950/70 backdrop-blur-md">
+    <nav class="mx-auto max-w-7xl px-6 h-16 flex items-center justify-between">
+      <a href="#top" class="flex items-center gap-2 font-display font-bold tracking-tight">
+        <span class="text-2xl leading-none">⚡</span>
+        <span class="text-base">grok-build-bridge</span>
+        <span class="hidden sm:inline rounded-md border border-white/10 px-1.5 py-0.5 text-[10px] uppercase tracking-wider text-zinc-400 font-mono">v0.1.0</span>
+      </a>
+      <div class="hidden md:flex items-center gap-8 text-sm text-zinc-400">
+        <a href="#status"    class="hover:text-neon-cyan transition-colors">Status</a>
+        <a href="#templates" class="hover:text-neon-cyan transition-colors">Templates</a>
+        <a href="#how"       class="hover:text-neon-cyan transition-colors">How it works</a>
+        <a href="#orchestra" class="hover:text-neon-cyan transition-colors">Orchestra</a>
+      </div>
+      <div class="flex items-center gap-3">
+        <a href="https://pypi.org/project/grok-build-bridge/" class="hidden sm:inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs text-zinc-300 border border-white/10 hover:border-white/30 transition-colors font-mono">
+          <span class="text-neon-cyan">pip</span> install grok-build-bridge
+        </a>
+        <a href="https://github.com/agentmindcloud/grok-build-bridge" class="inline-flex items-center gap-1.5 rounded-md bg-neon-cyan/10 text-neon-cyan border border-neon-cyan/30 px-3 py-1.5 text-xs font-semibold hover:bg-neon-cyan/20 transition-colors">
+          GitHub <span aria-hidden="true">→</span>
+        </a>
+      </div>
+    </nav>
+  </header>
+
+  <main id="top">
+
+    <!-- ==========================================================
+         Hero — gradient title, tagline, CTAs, install snippet.
+         ========================================================== -->
+    <section class="relative overflow-hidden">
+      <div class="absolute inset-0 bg-grid pointer-events-none"></div>
+      <div class="relative mx-auto max-w-6xl px-6 pt-20 pb-24 md:pt-28 md:pb-32 text-center">
+        <span class="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-zinc-300 font-mono">
+          <span class="relative inline-block h-1.5 w-1.5 rounded-full bg-neon-green live-dot"></span>
+          v0.1.0 · grok-4.20-0309 · official xai-sdk
+        </span>
+
+        <h1 class="mt-8 font-display font-bold leading-[1.05] text-5xl md:text-7xl tracking-tight">
+          <span class="bg-gradient-to-r from-neon-cyan via-neon-purple to-neon-pink bg-clip-text text-transparent">
+            Production-ready X agents
+          </span>
+          <br />
+          <span class="text-zinc-100">from a single YAML.</span>
+        </h1>
+
+        <p class="mt-6 mx-auto max-w-2xl text-lg md:text-xl text-zinc-400 leading-relaxed">
+          Two-layer safety audit. Multi-target deploy. Lucas veto integration.
+          The missing last-mile layer for Grok 4.20 — ship in 40 seconds, not a week.
+        </p>
+
+        <div class="mt-10 flex flex-col sm:flex-row items-center justify-center gap-4">
+          <a href="#how"
+             class="inline-flex items-center gap-2 rounded-lg bg-neon-cyan text-ink-950 font-semibold px-6 py-3 hover:brightness-110 shadow-glow-cyan transition">
+            Get Started <span aria-hidden="true">→</span>
+          </a>
+          <a href="https://github.com/agentmindcloud/grok-build-bridge"
+             class="inline-flex items-center gap-2 rounded-lg border border-white/15 px-6 py-3 hover:bg-white/5 hover:border-white/30 transition">
+            <svg viewBox="0 0 24 24" class="h-4 w-4" fill="currentColor" aria-hidden="true"><path d="M12 .3a12 12 0 0 0-3.8 23.4c.6.1.8-.3.8-.6v-2.2c-3.3.7-4-1.4-4-1.4-.6-1.4-1.4-1.8-1.4-1.8-1.1-.7.1-.7.1-.7 1.2.1 1.9 1.3 1.9 1.3 1.1 1.8 2.8 1.3 3.5 1 .1-.8.4-1.3.8-1.6-2.7-.3-5.5-1.3-5.5-6 0-1.3.5-2.4 1.3-3.2-.1-.4-.6-1.6.1-3.2 0 0 1-.3 3.3 1.2a11.4 11.4 0 0 1 6 0c2.3-1.5 3.3-1.2 3.3-1.2.7 1.6.2 2.8.1 3.2.8.8 1.3 1.9 1.3 3.2 0 4.6-2.8 5.6-5.5 5.9.4.4.8 1.1.8 2.2v3.3c0 .3.2.7.8.6A12 12 0 0 0 12 .3"/></svg>
+            View on GitHub
+          </a>
+        </div>
+
+        <!-- Install snippet — terminal-styled, copy-friendly. -->
+        <div class="mt-14 mx-auto max-w-2xl">
+          <div class="rounded-xl border border-white/10 bg-ink-900/80 backdrop-blur shadow-glow-purple overflow-hidden text-left">
+            <div class="flex items-center gap-2 px-4 py-2 border-b border-white/5 bg-ink-850">
+              <span class="h-3 w-3 rounded-full bg-neon-red"></span>
+              <span class="h-3 w-3 rounded-full bg-neon-amber"></span>
+              <span class="h-3 w-3 rounded-full bg-neon-green"></span>
+              <span class="ml-3 text-[11px] font-mono text-zinc-500">zsh · ~/agents</span>
+            </div>
+            <pre class="px-5 py-4 text-sm font-mono leading-6 text-zinc-200 overflow-x-auto"><span class="text-neon-cyan">$</span> pip install grok-build-bridge
+<span class="text-neon-cyan">$</span> grok-build-bridge init truthseeker-daily
+<span class="text-neon-cyan">$</span> grok-build-bridge run bridge.yaml --dry-run
+<span class="text-neon-green">✓</span> safety scan: PASSED  <span class="text-zinc-500">·  17.4k tokens  ·  ~$0.21</span></pre>
+          </div>
+          <p class="mt-3 text-xs text-zinc-500 font-mono">
+            requires Python 3.10+ · <code>XAI_API_KEY</code> · <code>X_BEARER_TOKEN</code>
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==========================================================
+         Live status — three stat cards. Numbers are illustrative
+         until the public metrics endpoint ships; the timestamp is
+         hydrated by JS in step 7 to read "Last refresh · just now".
+         ========================================================== -->
+    <section id="status" class="mx-auto max-w-7xl px-6 py-20 md:py-24">
+      <div class="flex items-end flex-wrap gap-3 mb-10">
+        <span class="relative inline-block h-2.5 w-2.5 rounded-full bg-neon-green live-dot mb-1"></span>
+        <h2 class="font-display text-3xl md:text-4xl font-bold tracking-tight">Live network status</h2>
+        <span class="ml-auto text-xs text-zinc-500 font-mono" data-last-refresh>last refresh · just now</span>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+
+        <!-- Active Agents -->
+        <article class="card relative rounded-2xl border border-white/10 bg-white/[0.02] p-6 overflow-hidden">
+          <div class="absolute inset-0 bg-gradient-to-br from-neon-cyan/[0.06] to-transparent pointer-events-none"></div>
+          <div class="relative">
+            <div class="flex items-center gap-2 text-zinc-400 text-sm">
+              <svg class="h-4 w-4 text-neon-cyan" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
+              Active Agents
+            </div>
+            <div class="mt-3 font-display text-5xl font-bold text-neon-cyan glow-cyan tabular-nums">1,284</div>
+            <div class="mt-2 flex items-center gap-2 text-xs text-zinc-500">
+              <span class="text-neon-green font-semibold">+47</span> this week
+              <span class="text-zinc-600">·</span>
+              <span>across 6 templates</span>
+            </div>
+            <!-- inline sparkline -->
+            <svg viewBox="0 0 120 32" class="mt-5 w-full h-8" aria-hidden="true">
+              <polyline fill="none" stroke="#00E5FF" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"
+                points="0,24 12,22 24,18 36,20 48,16 60,14 72,15 84,11 96,9 108,7 120,5"/>
+              <polyline fill="url(#g1)" stroke="none" points="0,24 12,22 24,18 36,20 48,16 60,14 72,15 84,11 96,9 108,7 120,5 120,32 0,32"/>
+              <defs>
+                <linearGradient id="g1" x1="0" x2="0" y1="0" y2="1">
+                  <stop offset="0%" stop-color="#00E5FF" stop-opacity="0.35"/>
+                  <stop offset="100%" stop-color="#00E5FF" stop-opacity="0"/>
+                </linearGradient>
+              </defs>
+            </svg>
+          </div>
+        </article>
+
+        <!-- Successful Deployments Today -->
+        <article class="card relative rounded-2xl border border-white/10 bg-white/[0.02] p-6 overflow-hidden">
+          <div class="absolute inset-0 bg-gradient-to-br from-neon-purple/[0.08] to-transparent pointer-events-none"></div>
+          <div class="relative">
+            <div class="flex items-center gap-2 text-zinc-400 text-sm">
+              <svg class="h-4 w-4 text-neon-purple2" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12l4 4L19 6"/></svg>
+              Successful Deployments — Today
+            </div>
+            <div class="mt-3 font-display text-5xl font-bold text-neon-purple2 glow-purple tabular-nums">312</div>
+            <div class="mt-2 flex items-center gap-2 text-xs text-zinc-500">
+              <span class="text-neon-green font-semibold">99.4%</span> dry-run → real success rate
+            </div>
+            <svg viewBox="0 0 120 32" class="mt-5 w-full h-8" aria-hidden="true">
+              <g>
+                <rect x="0"   y="20" width="6" height="12" rx="1.5" fill="#7C3AED" opacity="0.55"/>
+                <rect x="12"  y="14" width="6" height="18" rx="1.5" fill="#7C3AED" opacity="0.7"/>
+                <rect x="24"  y="18" width="6" height="14" rx="1.5" fill="#7C3AED" opacity="0.6"/>
+                <rect x="36"  y="10" width="6" height="22" rx="1.5" fill="#7C3AED" opacity="0.85"/>
+                <rect x="48"  y="16" width="6" height="16" rx="1.5" fill="#7C3AED" opacity="0.7"/>
+                <rect x="60"  y="8"  width="6" height="24" rx="1.5" fill="#9D4EDD"/>
+                <rect x="72"  y="12" width="6" height="20" rx="1.5" fill="#7C3AED" opacity="0.8"/>
+                <rect x="84"  y="6"  width="6" height="26" rx="1.5" fill="#9D4EDD"/>
+                <rect x="96"  y="14" width="6" height="18" rx="1.5" fill="#7C3AED" opacity="0.75"/>
+                <rect x="108" y="4"  width="6" height="28" rx="1.5" fill="#9D4EDD"/>
+              </g>
+            </svg>
+          </div>
+        </article>
+
+        <!-- Safety Blocks Prevented -->
+        <article class="card relative rounded-2xl border border-white/10 bg-white/[0.02] p-6 overflow-hidden">
+          <div class="absolute inset-0 bg-gradient-to-br from-neon-pink/[0.07] to-transparent pointer-events-none"></div>
+          <div class="relative">
+            <div class="flex items-center gap-2 text-zinc-400 text-sm">
+              <svg class="h-4 w-4 text-neon-pink" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l8 4v6c0 5-3.5 9-8 10-4.5-1-8-5-8-10V6l8-4z"/></svg>
+              Safety Blocks Prevented
+            </div>
+            <div class="mt-3 font-display text-5xl font-bold text-neon-pink glow-pink tabular-nums">47</div>
+            <div class="mt-2 flex items-center gap-2 text-xs text-zinc-500">
+              <span>this month</span>
+              <span class="text-zinc-600">·</span>
+              <span>fail-closed by default</span>
+            </div>
+            <!-- breakdown chips -->
+            <div class="mt-5 flex flex-wrap gap-1.5">
+              <span class="rounded-md border border-white/10 bg-white/5 px-2 py-0.5 text-[10px] text-zinc-300 font-mono">static · 28</span>
+              <span class="rounded-md border border-white/10 bg-white/5 px-2 py-0.5 text-[10px] text-zinc-300 font-mono">llm-audit · 16</span>
+              <span class="rounded-md border border-neon-purple/30 bg-neon-purple/10 px-2 py-0.5 text-[10px] text-neon-purple2 font-mono">lucas-veto · 3</span>
+            </div>
+          </div>
+        </article>
+
+      </div>
+
+      <p class="mt-6 text-xs text-zinc-500 font-mono">
+        Numbers are illustrative for the v0.1.0 launch; a public metrics endpoint ships in v0.3.0 (see <a class="underline decoration-dotted hover:text-neon-cyan" href="https://github.com/agentmindcloud/grok-build-bridge/blob/main/ROADMAP.md">ROADMAP</a>).
+      </p>
+    </section>
+
+    <!-- ==========================================================
+         Featured templates — horizontal scroll-snap carousel.
+         Cards mirror grok_build_bridge/templates/INDEX.yaml so this
+         stays in sync with what `grok-build-bridge templates` ships.
+         ========================================================== -->
+    <section id="templates" class="mx-auto max-w-7xl px-6 py-20 md:py-24">
+      <div class="flex items-end flex-wrap gap-3 mb-10">
+        <div>
+          <h2 class="font-display text-3xl md:text-4xl font-bold tracking-tight">Featured templates</h2>
+          <p class="mt-2 text-zinc-400">Six certified starting points. <code class="font-mono text-neon-cyan">grok-build-bridge init &lt;slug&gt;</code> drops one into your repo.</p>
+        </div>
+        <div class="ml-auto hidden md:flex items-center gap-2">
+          <button type="button" data-carousel-prev aria-label="Previous templates" class="h-9 w-9 rounded-md border border-white/10 hover:border-neon-cyan/40 hover:bg-white/5 transition flex items-center justify-center text-zinc-300">‹</button>
+          <button type="button" data-carousel-next aria-label="Next templates" class="h-9 w-9 rounded-md border border-white/10 hover:border-neon-cyan/40 hover:bg-white/5 transition flex items-center justify-center text-zinc-300">›</button>
+        </div>
+      </div>
+
+      <div data-carousel class="snap-carousel flex gap-5 overflow-x-auto pb-4 -mx-6 px-6 md:mx-0 md:px-0">
+
+        <!-- truthseeker-daily -->
+        <article class="card min-w-[300px] md:min-w-[340px] max-w-[340px] rounded-2xl border border-white/10 bg-ink-900/60 p-6 flex flex-col">
+          <div class="flex items-center justify-between">
+            <span class="text-[10px] font-mono uppercase tracking-wider text-neon-pink">x-deploy · scheduled</span>
+            <span class="text-[10px] font-mono text-zinc-500">≈ 22k tok</span>
+          </div>
+          <h3 class="mt-3 font-display text-xl font-bold text-zinc-100">truthseeker-daily</h3>
+          <p class="mt-2 text-sm text-zinc-400 leading-relaxed flex-1">
+            Daily fact-check of the 3 most-discussed X threads in a target domain, with primary-source citations and a calibration note.
+          </p>
+          <div class="mt-5 flex items-center justify-between text-xs text-zinc-500 font-mono">
+            <code>init truthseeker-daily</code>
+            <span class="text-neon-cyan">→</span>
+          </div>
+        </article>
+
+        <!-- research-thread-weekly -->
+        <article class="card min-w-[300px] md:min-w-[340px] max-w-[340px] rounded-2xl border border-white/10 bg-ink-900/60 p-6 flex flex-col">
+          <div class="flex items-center justify-between">
+            <span class="text-[10px] font-mono uppercase tracking-wider text-neon-cyan">research · weekly</span>
+            <span class="text-[10px] font-mono text-zinc-500">≈ 30k tok</span>
+          </div>
+          <h3 class="mt-3 font-display text-xl font-bold text-zinc-100">research-thread-weekly</h3>
+          <p class="mt-2 text-sm text-zinc-400 leading-relaxed flex-1">
+            Weekly deep-research agent. 5 parallel x_search queries plus web_search verification produce one authoritative X thread.
+          </p>
+          <div class="mt-5 flex items-center justify-between text-xs text-zinc-500 font-mono">
+            <code>init research-thread-weekly</code>
+            <span class="text-neon-cyan">→</span>
+          </div>
+        </article>
+
+        <!-- x-trend-analyzer -->
+        <article class="card min-w-[300px] md:min-w-[340px] max-w-[340px] rounded-2xl border border-white/10 bg-ink-900/60 p-6 flex flex-col">
+          <div class="flex items-center justify-between">
+            <span class="text-[10px] font-mono uppercase tracking-wider text-neon-purple2">trends · 6h cron</span>
+            <span class="text-[10px] font-mono text-zinc-500">≈ 18k tok</span>
+          </div>
+          <h3 class="mt-3 font-display text-xl font-bold text-zinc-100">x-trend-analyzer</h3>
+          <p class="mt-2 text-sm text-zinc-400 leading-relaxed flex-1">
+            Every 6 hours, publish a single X thread summarising the top 5 technical trends with primary-source citations.
+          </p>
+          <div class="mt-5 flex items-center justify-between text-xs text-zinc-500 font-mono">
+            <code>init x-trend-analyzer</code>
+            <span class="text-neon-cyan">→</span>
+          </div>
+        </article>
+
+        <!-- code-explainer-bot -->
+        <article class="card min-w-[300px] md:min-w-[340px] max-w-[340px] rounded-2xl border border-white/10 bg-ink-900/60 p-6 flex flex-col">
+          <div class="flex items-center justify-between">
+            <span class="text-[10px] font-mono uppercase tracking-wider text-neon-cyan3">repo · explainer</span>
+            <span class="text-[10px] font-mono text-zinc-500">≈ 12k tok</span>
+          </div>
+          <h3 class="mt-3 font-display text-xl font-bold text-zinc-100">code-explainer-bot</h3>
+          <p class="mt-2 text-sm text-zinc-400 leading-relaxed flex-1">
+            Point at a Python repo via <code class="font-mono text-zinc-300">$TARGET_REPO</code>. The agent reads it and posts a plain-English X thread explaining what the codebase does.
+          </p>
+          <div class="mt-5 flex items-center justify-between text-xs text-zinc-500 font-mono">
+            <code>init code-explainer-bot</code>
+            <span class="text-neon-cyan">→</span>
+          </div>
+        </article>
+
+        <!-- grok-build-coding-agent -->
+        <article class="card min-w-[300px] md:min-w-[340px] max-w-[340px] rounded-2xl border border-white/10 bg-ink-900/60 p-6 flex flex-col">
+          <div class="flex items-center justify-between">
+            <span class="text-[10px] font-mono uppercase tracking-wider text-neon-purple">typescript · local</span>
+            <span class="text-[10px] font-mono text-zinc-500">≈ 16k tok</span>
+          </div>
+          <h3 class="mt-3 font-display text-xl font-bold text-zinc-100">grok-build-coding-agent</h3>
+          <p class="mt-2 text-sm text-zinc-400 leading-relaxed flex-1">
+            Build a tiny TypeScript CLI via the grok-build-cli fallback chain. Deploy target is local; use this to validate a non-X deploy.
+          </p>
+          <div class="mt-5 flex items-center justify-between text-xs text-zinc-500 font-mono">
+            <code>init grok-build-coding-agent</code>
+            <span class="text-neon-cyan">→</span>
+          </div>
+        </article>
+
+        <!-- hello-bot -->
+        <article class="card min-w-[300px] md:min-w-[340px] max-w-[340px] rounded-2xl border border-white/10 bg-ink-900/60 p-6 flex flex-col">
+          <div class="flex items-center justify-between">
+            <span class="text-[10px] font-mono uppercase tracking-wider text-neon-green">smoke test · local</span>
+            <span class="text-[10px] font-mono text-zinc-500">0 tok</span>
+          </div>
+          <h3 class="mt-3 font-display text-xl font-bold text-zinc-100">hello-bot</h3>
+          <p class="mt-2 text-sm text-zinc-400 leading-relaxed flex-1">
+            The smallest local-source agent. Greets stdout and exits — ideal as a first bridge smoke test.
+          </p>
+          <div class="mt-5 flex items-center justify-between text-xs text-zinc-500 font-mono">
+            <code>init hello-bot</code>
+            <span class="text-neon-cyan">→</span>
+          </div>
+        </article>
+
+      </div>
+    </section>
+
+    <!-- ==========================================================
+         How it works — five-phase mini flow.
+         Cards are connected by ::after arrows (CSS only).
+         ========================================================== -->
+    <section id="how" class="mx-auto max-w-7xl px-6 py-20 md:py-24">
+      <div class="mb-12 text-center">
+        <h2 class="font-display text-3xl md:text-4xl font-bold tracking-tight">How it works</h2>
+        <p class="mt-3 text-zinc-400 max-w-2xl mx-auto">
+          Five typed phases. Each one fails closed before the next can start — no silent skips, no half-deployed agents.
+        </p>
+      </div>
+
+      <ol class="grid grid-cols-1 md:grid-cols-5 gap-6 md:gap-10">
+        <li class="phase-arrow relative card rounded-2xl border border-white/10 bg-ink-900/60 p-5">
+          <div class="flex items-center justify-between">
+            <span class="font-mono text-[10px] uppercase tracking-wider text-zinc-500">phase 1</span>
+            <span class="text-2xl">📄</span>
+          </div>
+          <h3 class="mt-3 font-display font-bold text-neon-cyan">Parse</h3>
+          <p class="mt-2 text-sm text-zinc-400 leading-relaxed">Strict Draft 2020-12 schema. Defaults filled. Config frozen.</p>
+        </li>
+
+        <li class="phase-arrow relative card rounded-2xl border border-white/10 bg-ink-900/60 p-5">
+          <div class="flex items-center justify-between">
+            <span class="font-mono text-[10px] uppercase tracking-wider text-zinc-500">phase 2</span>
+            <span class="text-2xl">🎯</span>
+          </div>
+          <h3 class="mt-3 font-display font-bold text-neon-purple2">Generate</h3>
+          <p class="mt-2 text-sm text-zinc-400 leading-relaxed">Streams <span class="font-mono">grok-4.20-0309</span> via the official xai-sdk. Writes <span class="font-mono">manifest.json</span>.</p>
+        </li>
+
+        <li class="phase-arrow relative card rounded-2xl border border-white/10 bg-ink-900/60 p-5">
+          <div class="flex items-center justify-between">
+            <span class="font-mono text-[10px] uppercase tracking-wider text-zinc-500">phase 3</span>
+            <span class="text-2xl">🛡️</span>
+          </div>
+          <h3 class="mt-3 font-display font-bold text-neon-pink">Safety</h3>
+          <p class="mt-2 text-sm text-zinc-400 leading-relaxed">Static regex sweep + JSON-mode Grok audit. Fails closed.</p>
+        </li>
+
+        <li class="phase-arrow relative card rounded-2xl border border-white/10 bg-ink-900/60 p-5">
+          <div class="flex items-center justify-between">
+            <span class="font-mono text-[10px] uppercase tracking-wider text-zinc-500">phase 4</span>
+            <span class="text-2xl">🚀</span>
+          </div>
+          <h3 class="mt-3 font-display font-bold text-neon-cyan2">Deploy</h3>
+          <p class="mt-2 text-sm text-zinc-400 leading-relaxed">Dispatch on <span class="font-mono">deploy.target</span>: x · vercel · render · local.</p>
+        </li>
+
+        <li class="relative card rounded-2xl border border-white/10 bg-ink-900/60 p-5">
+          <div class="flex items-center justify-between">
+            <span class="font-mono text-[10px] uppercase tracking-wider text-zinc-500">phase 5</span>
+            <span class="text-2xl">✅</span>
+          </div>
+          <h3 class="mt-3 font-display font-bold text-neon-green">Result</h3>
+          <p class="mt-2 text-sm text-zinc-400 leading-relaxed">BridgeResult: path · verdict · URL · cost · duration.</p>
+        </li>
+      </ol>
+
+      <p class="mt-10 text-center text-sm text-zinc-500">
+        Full pipeline runs in ~40 seconds. Use <code class="font-mono text-neon-cyan">--dry-run</code> to exercise phases 1–3 without deploying.
+      </p>
+    </section>
+
+    <!-- ==========================================================
+         Orchestra integration — emphasises the unique pairing.
+         Two-column: left = narrative + CTA; right = code snippet.
+         ========================================================== -->
+    <section id="orchestra" class="relative">
+      <div class="mx-auto max-w-7xl px-6 py-20 md:py-28">
+        <div class="rounded-3xl border border-white/10 bg-gradient-to-br from-neon-purple/[0.08] via-ink-900/60 to-neon-cyan/[0.05] p-8 md:p-12 shadow-glow-purple">
+          <div class="grid grid-cols-1 lg:grid-cols-12 gap-10 items-center">
+
+            <div class="lg:col-span-6">
+              <span class="inline-flex items-center gap-2 rounded-full border border-neon-purple/30 bg-neon-purple/10 px-3 py-1 text-xs text-neon-purple2 font-mono">
+                🎭 Orchestra-native
+              </span>
+              <h2 class="mt-5 font-display text-3xl md:text-4xl font-bold tracking-tight">
+                Two reviewers.<br/>
+                <span class="bg-gradient-to-r from-neon-purple2 to-neon-cyan bg-clip-text text-transparent">One durable contract.</span>
+              </h2>
+              <p class="mt-5 text-zinc-300 leading-relaxed">
+                <strong class="text-neon-purple2">Grok Agent Orchestra</strong> runs the multi-agent debate and applies the
+                <strong class="text-zinc-100">Lucas veto</strong> — an epistemic gate that blocks unsourced, biased, or
+                harmful briefs <em>before</em> Bridge ever sees them.
+              </p>
+              <p class="mt-3 text-zinc-400 leading-relaxed">
+                Bridge's two-layer code audit then handles the executable. A release ships only when both gates pass.
+                Defence in depth: the probability of a false-pass surviving all three reviewers is the product of three small numbers.
+              </p>
+              <div class="mt-7 flex flex-wrap gap-3">
+                <a href="https://github.com/agentmindcloud/grok-agent-orchestra"
+                   class="inline-flex items-center gap-2 rounded-lg bg-neon-purple text-white font-semibold px-5 py-2.5 hover:brightness-110 shadow-glow-purple transition">
+                  Explore Orchestra <span aria-hidden="true">→</span>
+                </a>
+                <a href="https://github.com/agentmindcloud/grok-build-bridge/tree/main/examples/orchestra-bridge"
+                   class="inline-flex items-center gap-2 rounded-lg border border-white/15 px-5 py-2.5 hover:bg-white/5 hover:border-white/30 transition">
+                  See the worked example
+                </a>
+              </div>
+            </div>
+
+            <div class="lg:col-span-6">
+              <div class="rounded-xl border border-white/10 bg-ink-950/80 backdrop-blur overflow-hidden">
+                <div class="flex items-center gap-2 px-4 py-2 border-b border-white/5 bg-ink-850">
+                  <span class="h-3 w-3 rounded-full bg-neon-red"></span>
+                  <span class="h-3 w-3 rounded-full bg-neon-amber"></span>
+                  <span class="h-3 w-3 rounded-full bg-neon-green"></span>
+                  <span class="ml-3 text-[11px] font-mono text-zinc-500">bridge.yaml</span>
+                </div>
+                <pre class="px-5 py-4 text-sm font-mono leading-6 text-zinc-200 overflow-x-auto"><span class="text-neon-cyan">version</span>: <span class="text-neon-cyan3">"1.0"</span>
+<span class="text-neon-cyan">name</span>: weekly-research-publisher
+<span class="text-neon-cyan">description</span>: Publishes the Orchestra-vetted brief as a weekly X thread.
+
+<span class="text-neon-cyan">build</span>:
+  <span class="text-neon-cyan">source</span>: grok
+  <span class="text-neon-cyan">grok_prompt</span>: |
+    Read out/research-brief.md and render a 7–10 post X thread...
+
+<span class="text-neon-cyan">deploy</span>:
+  <span class="text-neon-cyan">target</span>: x
+  <span class="text-neon-cyan">schedule</span>: <span class="text-neon-cyan3">"0 13 * * 1"</span>     <span class="text-zinc-500"># Mondays 13:00 UTC</span>
+  <span class="text-neon-cyan">post_to_x</span>: <span class="text-neon-pink">true</span>
+
+<span class="text-neon-cyan">safety</span>:
+  <span class="text-neon-cyan">audit_before_post</span>:   <span class="text-neon-pink">true</span>
+  <span class="text-neon-cyan">lucas_veto_enabled</span>:  <span class="text-neon-green">true</span>     <span class="text-zinc-500"># ← one line wires Orchestra in</span></pre>
+              </div>
+              <p class="mt-3 text-xs text-zinc-500 font-mono">
+                examples/orchestra-bridge/bridge.yaml
+              </p>
+            </div>
+
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- ============================================================
+       Footer — quick links + brand line.
+       ============================================================ -->
+  <footer id="footer" class="border-t border-white/5 mt-10">
+    <div class="mx-auto max-w-7xl px-6 py-14">
+      <div class="grid grid-cols-2 md:grid-cols-5 gap-8">
+
+        <div class="col-span-2">
+          <div class="flex items-center gap-2 font-display font-bold">
+            <span class="text-2xl leading-none">⚡</span>
+            <span>grok-build-bridge</span>
+          </div>
+          <p class="mt-3 text-sm text-zinc-400 max-w-sm leading-relaxed">
+            Production-ready X agents from a single YAML. Two-layer safety audit, multi-target deploy, Lucas veto integration.
+          </p>
+          <p class="mt-4 text-xs text-zinc-600 font-mono">Apache 2.0 · © 2026 AgentMindCloud</p>
+        </div>
+
+        <div>
+          <div class="text-xs uppercase tracking-wider text-zinc-500 font-semibold mb-3">Project</div>
+          <ul class="space-y-2 text-sm">
+            <li><a class="text-zinc-300 hover:text-neon-cyan transition" href="https://github.com/agentmindcloud/grok-build-bridge">GitHub</a></li>
+            <li><a class="text-zinc-300 hover:text-neon-cyan transition" href="https://pypi.org/project/grok-build-bridge/">PyPI</a></li>
+            <li><a class="text-zinc-300 hover:text-neon-cyan transition" href="https://github.com/agentmindcloud/grok-build-bridge/blob/main/ROADMAP.md">Roadmap</a></li>
+            <li><a class="text-zinc-300 hover:text-neon-cyan transition" href="https://github.com/agentmindcloud/grok-build-bridge/blob/main/CHANGELOG.md">Changelog</a></li>
+          </ul>
+        </div>
+
+        <div>
+          <div class="text-xs uppercase tracking-wider text-zinc-500 font-semibold mb-3">Ecosystem</div>
+          <ul class="space-y-2 text-sm">
+            <li><a class="text-zinc-300 hover:text-neon-purple2 transition" href="https://github.com/agentmindcloud/grok-agent-orchestra">grok-agent-orchestra</a></li>
+            <li><a class="text-zinc-300 hover:text-neon-purple2 transition" href="https://github.com/agentmindcloud/grok-install">grok-install</a></li>
+            <li><a class="text-zinc-300 hover:text-neon-purple2 transition" href="https://github.com/agentmindcloud/awesome-grok-agents">awesome-grok-agents</a></li>
+            <li><a class="text-zinc-300 hover:text-neon-purple2 transition" href="https://grokagents.dev">grokagents.dev</a></li>
+          </ul>
+        </div>
+
+        <div>
+          <div class="text-xs uppercase tracking-wider text-zinc-500 font-semibold mb-3">Community</div>
+          <ul class="space-y-2 text-sm">
+            <li><a class="text-zinc-300 hover:text-neon-pink transition" href="https://x.com/JanSol0s">X · @JanSol0s</a></li>
+            <li><span class="text-zinc-500">Discord <span class="text-[10px] font-mono text-zinc-600">— coming soon</span></span></li>
+            <li><a class="text-zinc-300 hover:text-neon-pink transition" href="https://github.com/agentmindcloud/grok-build-bridge/issues">Issues</a></li>
+            <li><a class="text-zinc-300 hover:text-neon-pink transition" href="https://github.com/agentmindcloud/grok-build-bridge/blob/main/CONTRIBUTING.md">Contributing</a></li>
+          </ul>
+        </div>
+
+      </div>
+
+      <div class="mt-12 pt-6 border-t border-white/5 flex flex-col md:flex-row items-center justify-between gap-3 text-xs text-zinc-500 font-mono">
+        <span>built on the official <a class="hover:text-neon-cyan" href="https://github.com/xai-org/xai-sdk-python">xai-sdk</a> · grok-4.20-0309</span>
+        <span class="flex items-center gap-2">
+          <span class="relative inline-block h-1.5 w-1.5 rounded-full bg-neon-green live-dot"></span>
+          system operational
+        </span>
+      </div>
+    </div>
+  </footer>
+
+  <!-- ============================================================
+       Minimal vanilla JS:
+         1. Carousel prev/next buttons (no dependency).
+         2. Relative "last refresh" timestamp.
+       Both are progressive enhancements — the page works without JS.
+       ============================================================ -->
+  <script>
+    // --- Templates carousel ----------------------------------------------
+    (function () {
+      const track = document.querySelector('[data-carousel]');
+      if (!track) return;
+      const step = () => Math.max(280, Math.round(track.clientWidth * 0.7));
+      document.querySelector('[data-carousel-prev]')?.addEventListener('click', () => {
+        track.scrollBy({ left: -step(), behavior: 'smooth' });
+      });
+      document.querySelector('[data-carousel-next]')?.addEventListener('click', () => {
+        track.scrollBy({ left:  step(), behavior: 'smooth' });
+      });
+    })();
+
+    // --- Relative "last refresh" timestamp -------------------------------
+    (function () {
+      const el = document.querySelector('[data-last-refresh]');
+      if (!el) return;
+      const start = Date.now();
+      const fmt = (s) => {
+        if (s < 10)   return 'just now';
+        if (s < 60)   return `${s}s ago`;
+        if (s < 3600) return `${Math.floor(s / 60)}m ago`;
+        return `${Math.floor(s / 3600)}h ago`;
+      };
+      const tick = () => {
+        const s = Math.floor((Date.now() - start) / 1000);
+        el.textContent = `last refresh · ${fmt(s)}`;
+      };
+      tick();
+      setInterval(tick, 5000);
+    })();
+  </script>
+
+</body>
+</html>
