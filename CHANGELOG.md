@@ -1,3 +1,7 @@
+## Fresh from the oven, v1.0 brand new version of the Build Bridge!!
+
+Lots of exiting updates before the official launch, scroll down and you can see how many features Build Bridge has built in store for you all to enjoy! Please share your use cases, would be lovely to see how the X community uses this tool. <3
+
 # Changelog
 
 All notable changes to **grok-build-bridge** are documented in this file.
