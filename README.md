@@ -11,6 +11,15 @@
 <h1 align="center">⚡ grok-build-bridge</h1>
 
 <p align="center">
+  <a href="https://pypi.org/project/grok-build-bridge/"><img src="https://img.shields.io/pypi/v/grok-build-bridge?style=for-the-badge&color=00E5FF&labelColor=0A0D14&logo=pypi&logoColor=FFFFFF" alt="PyPI" /></a>
+  <a href="https://github.com/agentmindcloud/grok-build-bridge/releases"><img src="https://img.shields.io/github/v/release/agentmindcloud/grok-build-bridge?style=for-the-badge&color=00D5FF&labelColor=0A0D14&logo=github&logoColor=FFFFFF" alt="GitHub Release" /></a>
+  <a href="https://github.com/agentmindcloud/grok-build-bridge/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/agentmindcloud/grok-build-bridge/ci.yml?style=for-the-badge&label=CI&labelColor=0A0D14&logo=githubactions&logoColor=FFFFFF" alt="CI" /></a>
+  <a href="https://www.python.org/downloads/"><img src="https://img.shields.io/badge/Python%203.10+-FF4FD8?style=for-the-badge&logo=python&logoColor=FFFFFF&labelColor=0A0D14" alt="Python 3.10+" /></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/License-Apache%202.0-7C3AED?style=for-the-badge&logoColor=FFFFFF&labelColor=0A0D14" alt="License" /></a>
+  <a href="https://github.com/agentmindcloud/grok-agent-orchestra"><img src="https://img.shields.io/badge/Lucas%20Certified-9D4EDD?style=for-the-badge&logoColor=FFFFFF&labelColor=0A0D14" alt="Lucas Certified" /></a>
+</p>
+
+<p align="center">
   <b>The last mile from "Grok generated my code" to "agent is live on X posting every 6 hours."</b><br/>
   One YAML. Codegen. Safety audit. Deploy. Zero glue.
 </p>
