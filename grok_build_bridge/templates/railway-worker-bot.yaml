@@ -1,0 +1,76 @@
+# ============================================================================
+# Template: railway-worker-bot
+# Purpose:  Long-running Grok-powered worker on Railway. Every 6 hours the
+#           agent ingests the latest dev.to / Hacker News front page,
+#           summarises the top 5 items, and publishes a single X post with
+#           inline citations. Railway's NIXPACKS builder picks up Python
+#           automatically; the bridge writes a railway.json for reproducibility.
+#
+# Required env vars:
+#   XAI_API_KEY       — xAI key used at build + runtime.
+#   X_BEARER_TOKEN    — X API bearer token used to publish the post.
+#
+# Estimated cost per run:
+#   ~$0.18  (≈10K input + ≈8K output tokens at reasoning_effort: medium).
+#   Worker stays warm between invocations on Railway's hobby plan; only the
+#   token cost recurs.
+#
+# Expected output:
+#   One X post (≤280 chars) every 6 hours, written by a Python `main.py` that
+#   the bridge generates in phase 2 and audits in phase 3.
+# ============================================================================
+
+version: "1.0"
+name: railway-worker-bot
+description: Hourly trend digest deployed as a Railway worker. Bridge writes railway.json and shells out to `railway up` when the CLI is on PATH.
+
+build:
+  source: grok
+  language: python
+  entrypoint: main.py
+  required_tools:
+    - x_search
+    - web_search
+  grok_prompt: |
+    You are generating ONE Python 3.11 file, `main.py`, that runs as a
+    Railway worker. Output one fenced ```python code block and nothing else.
+
+    Hard constraints:
+      - Use the xai-sdk Python client for model calls.
+      - Use httpx with explicit timeout=15.0 for every network call.
+      - NEVER use shell=True, eval(), exec(), os.system(), or pickle.
+      - Read XAI_API_KEY and X_BEARER_TOKEN from os.environ. If either is
+        missing, log to stderr and sys.exit(2).
+      - Use tenacity for retries (3 attempts, exp backoff min=2, max=16) on
+        every tool and X API call.
+      - Sleep 6 * 3600 seconds between iterations; never tighter than 1h.
+
+    Behaviour:
+      1. Pull the dev.to top 30 + Hacker News front page via web_search.
+      2. Cluster items by topic (ask Grok). Pick the 5 most engaging.
+      3. Compose one ≤280-char post: emoji + 1-line headline + 5 inline
+         "→ source.tld" citations separated by " · ".
+      4. Post via the X API. Capture and log post_id.
+      5. Sleep, then loop.
+
+    Top-level `if __name__ == "__main__": main()`.
+
+deploy:
+  target: railway
+  runtime: grok-install
+  post_to_x: true
+  # Railway runs the worker continuously; the agent's own loop owns the cadence.
+  # The schedule string below is informational — Railway dashboards consume it
+  # only if you wire a scheduled service in the project.
+  schedule: "0 */6 * * *"
+  safety_scan: true
+
+agent:
+  model: grok-4.20-0309
+  reasoning_effort: medium
+  personality: Concise, source-first, distinguishes signal from noise. Never editorialises beyond cited items.
+
+safety:
+  audit_before_post: true
+  max_tokens_per_run: 18000
+  lucas_veto_enabled: false

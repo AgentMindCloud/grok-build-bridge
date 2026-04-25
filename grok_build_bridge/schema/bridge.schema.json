@@ -67,9 +67,9 @@
       "additionalProperties": false,
       "properties": {
         "target": {
-          "description": "Deployment target. `x` hands off to grok-install's `deploy_to_x`; the others are glue for non-X hosts.",
+          "description": "Deployment target. `x` hands off to grok-install's `deploy_to_x`; the others are glue for non-X hosts. `railway` and `flyio` write a config file (railway.json / fly.toml) and shell out to the host CLI when it is on PATH.",
           "type": "string",
-          "enum": ["x", "vercel", "render", "local"],
+          "enum": ["x", "vercel", "render", "railway", "flyio", "local"],
           "default": "x"
         },
         "runtime": {

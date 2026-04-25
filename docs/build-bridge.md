@@ -67,7 +67,7 @@ contracts, not the conveniences.
 
 | Key | Type | Required | Default | Description |
 | --- | --- | :---: | --- | --- |
-| `target` | `enum` `x` · `vercel` · `render` · `local` |  | `x` | Deploy backend. |
+| `target` | `enum` `x` · `vercel` · `render` · `railway` · `flyio` · `local` |  | `x` | Deploy backend. |
 | `runtime` | `string` |  | `grok-install` | Runtime glue. Free-form so plugins can register new runtimes. |
 | `post_to_x` | `bool` |  | `false` | When true, the agent is allowed to post autonomously. Default off so dry-runs never hit the timeline. |
 | `safety_scan` | `bool` |  | `true` | Whether the phase-3 safety scan runs. Leave on unless you have a very good reason. |
@@ -82,6 +82,13 @@ contracts, not the conveniences.
   line as the deploy URL.
 - `render` → writes a minimal `render.yaml`; deploys happen on the git-push
   side after you commit the generated dir.
+- `railway` → writes `railway.json` (NIXPACKS + start command); shells out
+  to `railway up --detach` when the CLI is on `PATH`. See
+  [docs/deploy-targets-railway-flyio.md](deploy-targets-railway-flyio.md).
+- `flyio` → writes `fly.toml` (paketo buildpack + 8080 service); shells out
+  to `flyctl deploy --remote-only` (also accepts a `fly` symlink) when the
+  CLI is on `PATH`. See
+  [docs/deploy-targets-railway-flyio.md](deploy-targets-railway-flyio.md).
 - `local` → prints the right run command for the configured language.
 
 ### `agent`

@@ -82,3 +82,23 @@ templates:
     files:
       - src: research-thread-weekly.yaml
         dst: bridge.yaml
+
+  - name: railway-worker-bot
+    slug: railway-worker-bot
+    description: Hourly trend digest deployed as a Railway worker. Bridge writes railway.json and shells out to `railway up` when the CLI is on PATH.
+    required_env: [XAI_API_KEY, X_BEARER_TOKEN]
+    estimated_tokens: 18000
+    categories: [railway-deploy, scheduled, worker, tools]
+    files:
+      - src: railway-worker-bot.yaml
+        dst: bridge.yaml
+
+  - name: flyio-edge-bot
+    slug: flyio-edge-bot
+    description: Mention-driven X reply bot deployed to Fly.io. Bridge writes fly.toml and shells out to `flyctl deploy --remote-only` when the CLI is on PATH.
+    required_env: [XAI_API_KEY, X_BEARER_TOKEN]
+    estimated_tokens: 4000
+    categories: [flyio-deploy, streaming, edge, low-latency]
+    files:
+      - src: flyio-edge-bot.yaml
+        dst: bridge.yaml

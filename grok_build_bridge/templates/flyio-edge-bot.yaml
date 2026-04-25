@@ -1,0 +1,73 @@
+# ============================================================================
+# Template: flyio-edge-bot
+# Purpose:  Latency-sensitive Grok agent deployed to a Fly.io Machine in
+#           `iad` (override `primary_region` in the generated fly.toml for a
+#           different edge). Replies to incoming X mentions with a fact-checked
+#           one-liner. The bridge writes fly.toml and shells out to
+#           `flyctl deploy --remote-only` when the CLI is on PATH.
+#
+# Required env vars:
+#   XAI_API_KEY       — xAI key used at build + runtime.
+#   X_BEARER_TOKEN    — X API bearer token (read AND write scopes).
+#
+# Estimated cost per run:
+#   ~$0.04 per reply (≈3K input + ≈1K output tokens at reasoning_effort: low).
+#   Fly's free tier covers ~3 small Machines; cost beyond that is ~$2/mo.
+#
+# Expected output:
+#   A Python `main.py` that listens for X mentions via the streaming filtered
+#   endpoint, calls Grok with web_search, and posts one reply per mention.
+# ============================================================================
+
+version: "1.0"
+name: flyio-edge-bot
+description: Mention-driven X reply bot deployed to Fly.io. Bridge writes fly.toml and shells out to `flyctl deploy --remote-only` when the CLI is on PATH.
+
+build:
+  source: grok
+  language: python
+  entrypoint: main.py
+  required_tools:
+    - web_search
+  grok_prompt: |
+    You are generating ONE Python 3.11 file, `main.py`, that runs as a
+    Fly.io Machine. Output one fenced ```python code block and nothing else.
+
+    Hard constraints:
+      - Use the xai-sdk Python client for model calls.
+      - Use httpx with explicit timeout=15.0 for every network call.
+      - NEVER use shell=True, eval(), exec(), os.system(), or pickle.
+      - Read XAI_API_KEY and X_BEARER_TOKEN from os.environ. If either is
+        missing, log to stderr and sys.exit(2).
+      - Use tenacity for retries (3 attempts, exp backoff min=2, max=16) on
+        every tool and every X API call.
+      - Bind a tiny aiohttp HEAD listener on port 8080 so Fly's healthcheck
+        passes; respond 200 with the agent's uptime.
+
+    Behaviour:
+      1. Open the X filtered streaming endpoint with rule
+         `@${BOT_HANDLE} -is:retweet -is:reply`.
+      2. For each mention, call Grok with web_search, asking for a single
+         ≤200-char fact-checked reply that cites a primary source URL.
+      3. Post the reply with `in_reply_to_tweet_id`.
+      4. Capture {mention_id, reply_id, latency_ms, source_url} per turn.
+
+    Top-level `if __name__ == "__main__": asyncio.run(main())`.
+
+deploy:
+  target: flyio
+  runtime: grok-install
+  post_to_x: true
+  # No schedule — the agent runs continuously on a Fly Machine and waits on
+  # the X stream. The schedule field is left absent on purpose.
+  safety_scan: true
+
+agent:
+  model: grok-4.20-0309
+  reasoning_effort: low
+  personality: Direct, source-first, never speculative. Replies are short, polite, and cite one URL.
+
+safety:
+  audit_before_post: true
+  max_tokens_per_run: 4000
+  lucas_veto_enabled: false

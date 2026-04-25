@@ -5,11 +5,15 @@ Dispatches on ``deploy.target`` from the bridge config:
 * ``x``    — hand off to ``grok_install.runtime.deploy_to_x`` when that
   package is installed, otherwise write the payload to
   ``generated/deploy_payload.json`` via the Session 1 fallback stub.
-* ``vercel`` — run ``vercel --prod --yes`` in the generated directory if
+* ``vercel``  — run ``vercel --prod --yes`` in the generated directory if
   the CLI is on ``PATH``.
-* ``render`` — write a minimal ``render.yaml`` and print deploy-via-git
+* ``render``  — write a minimal ``render.yaml`` and print deploy-via-git
   instructions.
-* ``local`` — print the local run command for the generated entrypoint.
+* ``railway`` — write a minimal ``railway.json`` and shell out to
+  ``railway up --detach`` when the CLI is on ``PATH``.
+* ``flyio``   — write a minimal ``fly.toml`` and shell out to
+  ``flyctl deploy --remote-only`` when the CLI is on ``PATH``.
+* ``local``   — print the local run command for the generated entrypoint.
 
 Before any ``x`` deploy we audit the announcement content with
 :func:`grok_build_bridge.safety.audit_x_post`. If the audit fails and
@@ -38,6 +42,8 @@ DeployFn = Callable[[dict[str, Any]], Any]
 
 _DRY_RUN_PAYLOAD_PATH: Final[Path] = Path("generated") / "deploy_payload.json"
 _RENDER_YAML_NAME: Final[str] = "render.yaml"
+_RAILWAY_JSON_NAME: Final[str] = "railway.json"
+_FLY_TOML_NAME: Final[str] = "fly.toml"
 _MANIFEST_FILE: Final[str] = "bridge.manifest.json"
 
 
@@ -190,6 +196,74 @@ def _deploy_render(generated_dir: Path, config: dict[str, Any]) -> str:
     return f"render://pending/{config['name']}"
 
 
+def _deploy_railway(generated_dir: Path, config: dict[str, Any]) -> str:
+    railway_json = generated_dir / _RAILWAY_JSON_NAME
+    railway_json.write_text(_railway_json_body(config), encoding="utf-8")
+    info(f"wrote {railway_json}")
+
+    binary = shutil.which("railway")
+    if binary is None:
+        warn("railway CLI not found on PATH — skipping deploy and printing next steps instead.")
+        info(
+            "Install the CLI with `npm i -g @railway/cli`, then run "
+            f"`railway login && railway link && railway up --detach` inside {generated_dir}."
+        )
+        return f"railway://pending/{config['name']}"
+
+    info(f"shelling out: {binary} up --detach (cwd={generated_dir})")
+    try:
+        completed = subprocess.run(
+            [binary, "up", "--detach"],
+            cwd=generated_dir,
+            check=True,
+            capture_output=True,
+            text=True,
+        )
+    except subprocess.CalledProcessError as exc:
+        raise BridgeRuntimeError(
+            f"railway deploy failed (exit {exc.returncode}): {exc.stderr.strip()}",
+            suggestion="Run `railway login` and `railway link <project>` inside the generated dir, then retry.",
+        ) from exc
+
+    stdout = (completed.stdout or "").strip().splitlines()
+    # Railway prints a "Deployment live at <url>" line; surface the last non-empty line.
+    return stdout[-1] if stdout else f"railway://{config['name']}"
+
+
+def _deploy_flyio(generated_dir: Path, config: dict[str, Any]) -> str:
+    fly_toml = generated_dir / _FLY_TOML_NAME
+    fly_toml.write_text(_fly_toml_body(config), encoding="utf-8")
+    info(f"wrote {fly_toml}")
+
+    # The Fly CLI is `flyctl`, but legacy installs symlink it as `fly`.
+    binary = shutil.which("flyctl") or shutil.which("fly")
+    if binary is None:
+        warn("flyctl not found on PATH — skipping deploy and printing next steps instead.")
+        info(
+            "Install with `brew install flyctl` (macOS) or `curl -L https://fly.io/install.sh | sh`, "
+            f"then run `flyctl launch --no-deploy && flyctl deploy --remote-only` inside {generated_dir}."
+        )
+        return f"flyio://pending/{config['name']}"
+
+    info(f"shelling out: {binary} deploy --remote-only (cwd={generated_dir})")
+    try:
+        completed = subprocess.run(
+            [binary, "deploy", "--remote-only"],
+            cwd=generated_dir,
+            check=True,
+            capture_output=True,
+            text=True,
+        )
+    except subprocess.CalledProcessError as exc:
+        raise BridgeRuntimeError(
+            f"flyio deploy failed (exit {exc.returncode}): {exc.stderr.strip()}",
+            suggestion="Run `flyctl auth login` and `flyctl apps create <name>`, then retry.",
+        ) from exc
+
+    stdout = (completed.stdout or "").strip().splitlines()
+    return stdout[-1] if stdout else f"flyio://{config['name']}"
+
+
 def _deploy_local(generated_dir: Path, config: dict[str, Any]) -> str:
     entrypoint = (config.get("build") or {}).get("entrypoint") or "main.py"
     language = (config.get("build") or {}).get("language") or "python"
@@ -219,6 +293,74 @@ def _render_yaml_body(config: dict[str, Any]) -> str:
         f"    buildCommand: ''\n"
         f"    startCommand: {start_cmd}\n"
         f"{schedule_block}"
+    )
+
+
+def _railway_json_body(config: dict[str, Any]) -> str:
+    """Minimal railway.json based on the bridge config.
+
+    Railway's Nixpacks builder auto-detects the language; we just pin the
+    start command so the deploy is reproducible. Schedules on Railway are
+    set per-service in the dashboard rather than the config file, so we
+    leave that out and surface the cron string in the printed instructions.
+    """
+    language = (config.get("build") or {}).get("language") or "python"
+    entrypoint = (config.get("build") or {}).get("entrypoint") or "main.py"
+    start_cmd = {
+        "python": f"python {entrypoint}",
+        "typescript": f"node {entrypoint}",
+        "go": f"go run {entrypoint}",
+    }.get(language, f"python {entrypoint}")
+    body: dict[str, Any] = {
+        "$schema": "https://railway.app/railway.schema.json",
+        "build": {"builder": "NIXPACKS"},
+        "deploy": {
+            "startCommand": start_cmd,
+            "restartPolicyType": "ON_FAILURE",
+            "restartPolicyMaxRetries": 3,
+        },
+    }
+    return json.dumps(body, indent=2) + "\n"
+
+
+def _fly_toml_body(config: dict[str, Any]) -> str:
+    """Minimal fly.toml based on the bridge config.
+
+    Fly's TOML schema is large; we emit the smallest valid stanza that
+    covers builder + process + service. Cron-style schedules are not a
+    fly.toml field — they are configured via ``flyctl machine run
+    --schedule`` after deploy — so we surface the cron string as a comment.
+    """
+    name = config["name"]
+    language = (config.get("build") or {}).get("language") or "python"
+    entrypoint = (config.get("build") or {}).get("entrypoint") or "main.py"
+    start_cmd = {
+        "python": f"python {entrypoint}",
+        "typescript": f"node {entrypoint}",
+        "go": f"go run {entrypoint}",
+    }.get(language, f"python {entrypoint}")
+    schedule = (config.get("deploy") or {}).get("schedule")
+    schedule_comment = (
+        f"# schedule = '{schedule}'  # set via `flyctl machine run --schedule` after deploy\n"
+        if schedule
+        else ""
+    )
+    return (
+        f"# fly.toml — generated by grok-build-bridge\n"
+        f"app = '{name}'\n"
+        f"primary_region = 'iad'\n"
+        f"\n"
+        f"[build]\n"
+        f"  builder = 'paketobuildpacks/builder:base'\n"
+        f"\n"
+        f"[processes]\n"
+        f'  app = "{start_cmd}"\n'
+        f"\n"
+        f"[[services]]\n"
+        f"  protocol = 'tcp'\n"
+        f"  internal_port = 8080\n"
+        f"  processes = ['app']\n"
+        f"{schedule_comment}"
     )
 
 
@@ -273,10 +415,14 @@ def deploy_to_target(
         return _deploy_vercel(generated_dir, config)
     if target == "render":
         return _deploy_render(generated_dir, config)
+    if target == "railway":
+        return _deploy_railway(generated_dir, config)
+    if target == "flyio":
+        return _deploy_flyio(generated_dir, config)
     if target == "local":
         return _deploy_local(generated_dir, config)
 
     raise BridgeRuntimeError(
         f"unknown deploy.target {target!r}",
-        suggestion="Use one of: x, vercel, render, local.",
+        suggestion="Use one of: x, vercel, render, railway, flyio, local.",
     )

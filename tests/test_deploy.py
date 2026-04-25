@@ -17,7 +17,9 @@ import pytest
 
 from grok_build_bridge import deploy as deploy_mod
 from grok_build_bridge.deploy import (
+    _deploy_flyio,
     _deploy_local,
+    _deploy_railway,
     _deploy_render,
     _deploy_vercel,
     _dry_run_stub,
@@ -126,6 +128,162 @@ def test_deploy_render_typescript_entrypoint(tmp_path: Path) -> None:
     _deploy_render(tmp_path, cfg)
     rendered = (tmp_path / "render.yaml").read_text(encoding="utf-8")
     assert "startCommand: node index.ts" in rendered
+
+
+# ---------------------------------------------------------------------------
+# _deploy_railway
+# ---------------------------------------------------------------------------
+
+
+def test_deploy_railway_without_binary_writes_config_and_returns_pending(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr("grok_build_bridge.deploy.shutil.which", lambda _: None)
+    cfg = _base_config()
+    cfg["deploy"] = {"target": "railway"}
+    url = _deploy_railway(tmp_path, cfg)
+    assert url == f"railway://pending/{cfg['name']}"
+    body = json.loads((tmp_path / "railway.json").read_text(encoding="utf-8"))
+    assert body["build"]["builder"] == "NIXPACKS"
+    assert body["deploy"]["startCommand"] == "python main.py"
+    assert body["deploy"]["restartPolicyType"] == "ON_FAILURE"
+
+
+def test_deploy_railway_with_binary_returns_last_stdout_line(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr("grok_build_bridge.deploy.shutil.which", lambda _: "/fake/railway")
+
+    class _Completed:
+        stdout = "Building...\nDeployment live at https://railway.example/svc\n"
+        stderr = ""
+        returncode = 0
+
+    monkeypatch.setattr(
+        "grok_build_bridge.deploy.subprocess.run",
+        lambda *args, **kwargs: _Completed(),
+    )
+    cfg = _base_config()
+    cfg["deploy"] = {"target": "railway"}
+    url = _deploy_railway(tmp_path, cfg)
+    assert url == "Deployment live at https://railway.example/svc"
+    assert (tmp_path / "railway.json").is_file()
+
+
+def test_deploy_railway_raises_on_cli_failure(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr("grok_build_bridge.deploy.shutil.which", lambda _: "/fake/railway")
+
+    def _boom(*args: Any, **kwargs: Any) -> None:
+        raise subprocess.CalledProcessError(1, "railway", stderr="not linked to a project")
+
+    monkeypatch.setattr("grok_build_bridge.deploy.subprocess.run", _boom)
+    cfg = _base_config()
+    cfg["deploy"] = {"target": "railway"}
+    with pytest.raises(BridgeRuntimeError, match="railway deploy failed"):
+        _deploy_railway(tmp_path, cfg)
+
+
+def test_deploy_railway_typescript_start_command(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr("grok_build_bridge.deploy.shutil.which", lambda _: None)
+    cfg = _base_config()
+    cfg["build"] = {"source": "local", "language": "typescript", "entrypoint": "index.ts"}
+    cfg["deploy"] = {"target": "railway"}
+    _deploy_railway(tmp_path, cfg)
+    body = json.loads((tmp_path / "railway.json").read_text(encoding="utf-8"))
+    assert body["deploy"]["startCommand"] == "node index.ts"
+
+
+# ---------------------------------------------------------------------------
+# _deploy_flyio
+# ---------------------------------------------------------------------------
+
+
+def test_deploy_flyio_without_binary_writes_config_and_returns_pending(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr("grok_build_bridge.deploy.shutil.which", lambda _: None)
+    cfg = _base_config()
+    cfg["deploy"] = {"target": "flyio", "schedule": "0 9 * * *"}
+    url = _deploy_flyio(tmp_path, cfg)
+    assert url == f"flyio://pending/{cfg['name']}"
+    body = (tmp_path / "fly.toml").read_text(encoding="utf-8")
+    assert f"app = '{cfg['name']}'" in body
+    assert "primary_region = 'iad'" in body
+    assert 'app = "python main.py"' in body
+    # Schedule is emitted as a comment, not a fly.toml field.
+    assert "# schedule = '0 9 * * *'" in body
+
+
+def test_deploy_flyio_with_binary_returns_last_stdout_line(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    # `flyctl` lookup wins over the legacy `fly` symlink.
+    monkeypatch.setattr(
+        "grok_build_bridge.deploy.shutil.which",
+        lambda name: "/fake/flyctl" if name == "flyctl" else None,
+    )
+
+    class _Completed:
+        stdout = "==> deploying\nVisit your app at https://flyio.example/app\n"
+        stderr = ""
+        returncode = 0
+
+    monkeypatch.setattr(
+        "grok_build_bridge.deploy.subprocess.run",
+        lambda *args, **kwargs: _Completed(),
+    )
+    cfg = _base_config()
+    cfg["deploy"] = {"target": "flyio"}
+    url = _deploy_flyio(tmp_path, cfg)
+    assert url == "Visit your app at https://flyio.example/app"
+    assert (tmp_path / "fly.toml").is_file()
+
+
+def test_deploy_flyio_legacy_fly_symlink_is_accepted(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    # Pretend only the legacy `fly` symlink is on PATH.
+    monkeypatch.setattr(
+        "grok_build_bridge.deploy.shutil.which",
+        lambda name: "/fake/fly" if name == "fly" else None,
+    )
+
+    captured: dict[str, Any] = {}
+
+    class _Completed:
+        stdout = "ok\n"
+        stderr = ""
+        returncode = 0
+
+    def _record(cmd: list[str], **kwargs: Any) -> _Completed:
+        captured["cmd"] = cmd
+        return _Completed()
+
+    monkeypatch.setattr("grok_build_bridge.deploy.subprocess.run", _record)
+    cfg = _base_config()
+    cfg["deploy"] = {"target": "flyio"}
+    _deploy_flyio(tmp_path, cfg)
+    assert captured["cmd"][0] == "/fake/fly"
+    assert captured["cmd"][1:] == ["deploy", "--remote-only"]
+
+
+def test_deploy_flyio_raises_on_cli_failure(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr("grok_build_bridge.deploy.shutil.which", lambda _: "/fake/flyctl")
+
+    def _boom(*args: Any, **kwargs: Any) -> None:
+        raise subprocess.CalledProcessError(1, "flyctl", stderr="app not found")
+
+    monkeypatch.setattr("grok_build_bridge.deploy.subprocess.run", _boom)
+    cfg = _base_config()
+    cfg["deploy"] = {"target": "flyio"}
+    with pytest.raises(BridgeRuntimeError, match="flyio deploy failed"):
+        _deploy_flyio(tmp_path, cfg)
 
 
 # ---------------------------------------------------------------------------
@@ -267,3 +425,36 @@ def test_deploy_to_target_render(tmp_path: Path) -> None:
     url = deploy_to_target(tmp_path, cfg)
     assert url.startswith("render://pending/")
     assert (tmp_path / "render.yaml").is_file()
+
+
+def test_deploy_to_target_railway_without_binary(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    cfg = _base_config()
+    cfg["deploy"] = {"target": "railway"}
+    monkeypatch.setattr("grok_build_bridge.deploy.shutil.which", lambda _: None)
+    url = deploy_to_target(tmp_path, cfg)
+    assert url.startswith("railway://pending/")
+    assert (tmp_path / "railway.json").is_file()
+
+
+def test_deploy_to_target_flyio_without_binary(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    cfg = _base_config()
+    cfg["deploy"] = {"target": "flyio"}
+    monkeypatch.setattr("grok_build_bridge.deploy.shutil.which", lambda _: None)
+    url = deploy_to_target(tmp_path, cfg)
+    assert url.startswith("flyio://pending/")
+    assert (tmp_path / "fly.toml").is_file()
+
+
+def test_deploy_to_target_unknown_lists_all_six_targets(tmp_path: Path) -> None:
+    cfg = _base_config()
+    cfg["deploy"] = {"target": "unknown-host"}
+    with pytest.raises(BridgeRuntimeError) as info:
+        deploy_to_target(tmp_path, cfg)
+    # The suggestion must enumerate the new targets so users get the right hint.
+    suggestion = info.value.suggestion or ""
+    for name in ("x", "vercel", "render", "railway", "flyio", "local"):
+        assert name in suggestion

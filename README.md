@@ -284,13 +284,32 @@ See [`.env.example`](.env.example).
   <img src="https://img.shields.io/badge/target%3A%20x-00E5FF?style=for-the-badge&logo=x&logoColor=001018&labelColor=0A0D14" />
   <img src="https://img.shields.io/badge/target%3A%20vercel-7C3AED?style=for-the-badge&logo=vercel&logoColor=FFFFFF&labelColor=0A0D14" />
   <img src="https://img.shields.io/badge/target%3A%20render-FF4FD8?style=for-the-badge&logoColor=FFFFFF&labelColor=0A0D14" />
+  <img src="https://img.shields.io/badge/target%3A%20railway-9D4EDD?style=for-the-badge&logo=railway&logoColor=FFFFFF&labelColor=0A0D14" />
+  <img src="https://img.shields.io/badge/target%3A%20flyio-5EF2FF?style=for-the-badge&logoColor=001018&labelColor=0A0D14" />
   <img src="https://img.shields.io/badge/target%3A%20local-00D5FF?style=for-the-badge&logoColor=001018&labelColor=0A0D14" />
 </p>
 
-- **`x`** — via `grok_install.runtime.deploy_to_x`, or a dry-run stub that writes `generated/deploy_payload.json` when the ecosystem package is absent.
-- **`vercel`** — shells out to `vercel --prod --yes`.
-- **`render`** — writes a minimal `render.yaml`.
-- **`local`** — prints the run command. Good for CI smoke tests.
+Six first-class targets. All use the same pipeline (parse → generate → safety → deploy); the only thing that changes is the last hop.
+
+| Target | What Bridge does | Pre-flight | Pending URL |
+| --- | --- | --- | --- |
+| **`x`** | Hands off to `grok_install.runtime.deploy_to_x`, or writes `generated/deploy_payload.json` via the fallback stub when the ecosystem package is absent. | `XAI_API_KEY`, `X_BEARER_TOKEN` | `x://<name>` |
+| **`vercel`** | Shells out to `vercel --prod --yes` in the generated dir. | `npm i -g vercel` · `vercel login` | `vercel://pending/<name>` |
+| **`render`** | Writes a minimal `render.yaml`; deploy happens on `git push` to the connected repo. | Repo connected to a Render service | `render://pending/<name>` |
+| **`railway`** | Writes `railway.json` (NIXPACKS + start command), then shells out to `railway up --detach`. | `npm i -g @railway/cli` · `railway login` · `railway link <project>` | `railway://pending/<name>` |
+| **`flyio`** | Writes `fly.toml` (paketo buildpack + 8080 service), then shells out to `flyctl deploy --remote-only` (also accepts a `fly` symlink). | `brew install flyctl` (or `curl -L https://fly.io/install.sh \| sh`) · `flyctl auth login` · `flyctl apps create <name>` | `flyio://pending/<name>` |
+| **`local`** | Prints the run command for the generated entrypoint. | — | `<generated_dir>` |
+
+**One-line switches** between hosts — same agent, six destinations:
+
+```yaml
+deploy:
+  target: railway        # or vercel · render · flyio · x · local
+  schedule: "0 */6 * * *"
+  safety_scan: true
+```
+
+Worked examples: [`examples/railway.yaml`](examples/railway.yaml) · [`examples/flyio.yaml`](examples/flyio.yaml). Deeper docs: [`docs/deploy-targets-railway-flyio.md`](docs/deploy-targets-railway-flyio.md). Bundled templates: `grok-build-bridge init railway-worker-bot` · `grok-build-bridge init flyio-edge-bot`.
 
 ## ✦ Templates
 
