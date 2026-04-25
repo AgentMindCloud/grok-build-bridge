@@ -1,56 +1,90 @@
-# grok-build-bridge — local dev / preview compose stack
+# grok-build-bridge — local + production compose stack
 #
-# Quick start:
-#   cp .env.example .env          # then fill in XAI_API_KEY + X_BEARER_TOKEN
-#   docker compose up             # builds the image and runs the default command
-#   docker compose run --rm grok-build-bridge run examples/hello.yaml
-#   docker compose run --rm grok-build-bridge templates
+# Two profiles share one image build via a YAML anchor:
+#   • dev   → bind-mounts source for live editable iteration. Default profile.
+#   • prod  → no mounts; the image is the source of truth.
 #
-# The source is bind-mounted, so editable-install picks up local edits live —
-# no rebuild needed for code changes (only for dependency changes).
+# Quick start
+# -----------
+#   cp .env.example .env                       # fill in XAI_API_KEY + X_BEARER_TOKEN
+#   docker compose --profile dev up            # dev mode (live source, fast loop)
+#   docker compose --profile prod up -d        # prod mode (image-only, restarts)
+#   docker compose --profile dev run --rm bridge run examples/hello.yaml
+#   docker compose --profile dev run --rm bridge templates
+#
+# Required environment variables (loaded from .env)
+# -------------------------------------------------
+#   XAI_API_KEY      xAI / Grok API key                 → https://console.x.ai
+#                    e.g. XAI_API_KEY=xai-XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+#   X_BEARER_TOKEN   X (Twitter) API bearer token       → https://developer.x.com
+#                    e.g. X_BEARER_TOKEN=AAAAAAAAAAAAAAAAAAAAAA…
+#   GROK_INSTALL_HOME (optional) path to a local grok-install-ecosystem clone
+#
+# Future Web UI
+# -------------
+# When the Typer-based status UI lands (roadmap Phase 4), it will bind to
+# port 8000 inside the container. After it ships, run:
+#     docker compose --profile prod up -d
+# then open http://localhost:8000 — the dev profile will hot-reload via the
+# existing source bind-mount.
+
+# Shared service template — keeps build, env, ports, healthcheck DRY.
+x-bridge-base: &bridge-base
+  build:
+    context: .
+    dockerfile: Dockerfile
+    # Enable BuildKit cache mounts in the Dockerfile.
+    args:
+      BUILDKIT_INLINE_CACHE: "1"
+  image: grok-build-bridge:latest
+  env_file:
+    - .env
+  environment:
+    PYTHONUNBUFFERED: "1"
+    # Examples — real values live in .env (never commit them).
+    # XAI_API_KEY: "xai-XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
+    # X_BEARER_TOKEN: "AAAAAAAAAAAAAAAAAAAAAA..."
+  ports:
+    - "8000:8000"
+  healthcheck:
+    test: ["CMD", "grok-build-bridge", "version"]
+    interval: 30s
+    timeout: 10s
+    start_period: 5s
+    retries: 3
 
 services:
-  grok-build-bridge:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    image: grok-build-bridge:dev
-    container_name: grok-build-bridge
 
-    # Default `up` behaviour: print the banner + help and exit cleanly.
-    # Real usage goes through `docker compose run` — see header comment.
+  # ---------------------------------------------------------------------------
+  # Development service — bind-mounted source, default `up` target.
+  # `docker compose --profile dev up`     → live editable iteration.
+  # ---------------------------------------------------------------------------
+  bridge:
+    <<: *bridge-base
+    profiles: ["dev"]
+    container_name: grok-build-bridge-dev
+    # `--help` exits cleanly so `up` doesn't loop. Use `compose run` for real
+    # commands, e.g. `docker compose --profile dev run --rm bridge run x.yaml`.
     command: ["--help"]
-
-    # Pulls XAI_API_KEY / X_BEARER_TOKEN / GROK_INSTALL_HOME from .env.
-    # File is optional at compose-parse time; create it from .env.example.
-    env_file:
-      - .env
-
-    environment:
-      # Surface CLI logs immediately rather than buffering until exit.
-      PYTHONUNBUFFERED: "1"
-
-    # Reserved for the upcoming Typer-based status UI (roadmap Phase 4).
-    ports:
-      - "8000:8000"
-
     volumes:
-      # Bind-mount the package + tests + examples so editable mode picks
-      # up host edits without rebuilding the image. Schema, templates,
-      # and snippets live inside grok_build_bridge/ and come along for free.
+      # Editable install at /opt/venv resolves imports from /app/grok_build_bridge,
+      # so bind-mounting the package picks up host edits without a rebuild.
       - ./grok_build_bridge:/app/grok_build_bridge
       - ./tests:/app/tests
       - ./examples:/app/examples
-
-    # Mirrors the Dockerfile HEALTHCHECK so `docker compose ps` reports
-    # status for long-running invocations (e.g. when the UI service lands).
-    healthcheck:
-      test: ["CMD", "grok-build-bridge", "version"]
-      interval: 30s
-      timeout: 10s
-      start_period: 5s
-      retries: 3
-
-    # Don't auto-restart on `--help` exit; flip to `unless-stopped` once
-    # the service has a long-running default command (UI / scheduler).
+      # Mount .env read-only as a fallback if env_file is empty (CI etc.).
+      - ./.env:/app/.env:ro
     restart: "no"
+
+  # ---------------------------------------------------------------------------
+  # Production service — image is the source of truth, no host mounts.
+  # `docker compose --profile prod up -d` → long-running, auto-restart.
+  # ---------------------------------------------------------------------------
+  bridge-prod:
+    <<: *bridge-base
+    profiles: ["prod"]
+    container_name: grok-build-bridge
+    # Keep this in sync with whatever the future UI service exposes.
+    # Until the UI lands, `version` is a reasonable smoke-test default.
+    command: ["version"]
+    restart: unless-stopped

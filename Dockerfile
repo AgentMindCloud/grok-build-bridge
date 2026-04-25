@@ -1,25 +1,24 @@
 # syntax=docker/dockerfile:1.6
 #
-# grok-build-bridge — multi-stage image
+# grok-build-bridge — multi-stage, non-root, cache-optimised image
 #
-# Stage 1 (builder): installs build tools, creates a relocatable virtualenv,
-#                    and performs the editable install with dev extras.
-# Stage 2 (runtime): slim image that copies the venv + project source.
-#                    No compilers, no pip cache, just the CLI ready to run.
+# Stage 1 (builder): build tools + relocatable venv with editable install + dev extras.
+# Stage 2 (runtime): slim image, non-root user, venv + source, healthcheck.
 #
-# Build:   docker build -t grok-build-bridge:dev .
-# Run:     docker run --rm --env-file .env grok-build-bridge:dev run examples/hello.yaml
+# Build:   DOCKER_BUILDKIT=1 docker build -t grok-build-bridge:latest .
+# Run:     docker run --rm --env-file .env grok-build-bridge:latest run examples/hello.yaml
 
-# ---------- Stage 1: builder ----------
+# =============================================================================
+# Stage 1: builder
+# =============================================================================
 FROM python:3.11-slim AS builder
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
-    PIP_NO_CACHE_DIR=1 \
     PIP_DISABLE_PIP_VERSION_CHECK=1
 
-# Build-only OS deps. `git` is needed for any VCS-based wheels;
-# `build-essential` covers source-only wheels (rare with our pinset).
+# Build-only OS deps. `git` covers VCS-based wheels; `build-essential`
+# covers any source-only wheels (rare with the current pinset).
 RUN apt-get update && apt-get install -y --no-install-recommends \
         build-essential \
         git \
@@ -31,17 +30,27 @@ ENV PATH="/opt/venv/bin:$PATH"
 
 WORKDIR /app
 
-# Copy metadata + package source. Layer-cache friendly: changing tests/
-# or docs/ does not bust the dep-install cache below.
+# ---- Layer 1: dependency-only install (cached unless pyproject.toml changes) --
+# Copy ONLY the metadata + a stub package skeleton so hatchling can resolve
+# the project name/version. Heavy dep resolution lives in this layer alone;
+# editing source files below does NOT bust this cache.
 COPY pyproject.toml README.md LICENSE ./
+RUN mkdir -p grok_build_bridge \
+    && printf '__version__ = "0.0.0"\n' > grok_build_bridge/__init__.py
+
+# BuildKit cache mount keeps wheels across builds — full re-resolves stay fast.
+RUN --mount=type=cache,target=/root/.cache/pip \
+    pip install --upgrade pip \
+    && pip install ".[dev]"
+
+# ---- Layer 2: real source + editable re-link (fast; --no-deps) ----------------
 COPY grok_build_bridge ./grok_build_bridge
+RUN --mount=type=cache,target=/root/.cache/pip \
+    pip install -e . --no-deps
 
-# Editable install pins the .pth path to /app/grok_build_bridge, which
-# also exists in the runtime stage (see Stage 2 `COPY . .`).
-RUN pip install --upgrade pip \
-    && pip install -e ".[dev]"
-
-# ---------- Stage 2: runtime ----------
+# =============================================================================
+# Stage 2: runtime
+# =============================================================================
 FROM python:3.11-slim AS runtime
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
@@ -49,26 +58,37 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     PATH="/opt/venv/bin:$PATH"
 
 # tini = real PID 1; forwards SIGINT/SIGTERM to the CLI cleanly so
-# `docker stop` doesn't sit waiting on the 10-second kill timeout.
+# `docker stop` doesn't wait the full kill timeout.
 RUN apt-get update && apt-get install -y --no-install-recommends \
         tini \
     && rm -rf /var/lib/apt/lists/*
 
-# Bring the venv (with editable install + dev tools) over from the builder.
-COPY --from=builder /opt/venv /opt/venv
+# ---- Non-root user (UID/GID 10001) ------------------------------------------
+# Static high UID dodges collisions with host users when bind-mounting in dev.
+# Override at build time:  docker build --build-arg APP_UID=$(id -u) ...
+ARG APP_UID=10001
+ARG APP_GID=10001
+RUN groupadd --system --gid ${APP_GID} app \
+    && useradd --system --uid ${APP_UID} --gid app \
+        --home /app --shell /bin/bash app
+
+# Copy the venv with correct ownership so the non-root user can import / write.
+COPY --from=builder --chown=app:app /opt/venv /opt/venv
 
 WORKDIR /app
 
-# Full project — keeps tests/, examples/, docs/, templates/ available
-# inside the container for `grok-build-bridge run examples/hello.yaml` etc.
-COPY . .
+# Full project — keeps tests/, examples/, docs/, templates/ available inside
+# the container. .dockerignore strips secrets, caches, .git, etc.
+COPY --chown=app:app . .
+
+USER app
 
 # Reserved for the upcoming Typer-based status UI (roadmap Phase 4).
-# Exposed now so docker-compose port mapping is stable when the UI lands.
+# Exposed now so compose port mapping is stable when the UI lands.
 EXPOSE 8000
 
 # Cheap, reliable healthcheck: `version` proves the package imports and
-# xai-sdk is wired up correctly. ~150ms locally.
+# xai-sdk is wired up correctly. ~150 ms locally.
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
     CMD grok-build-bridge version >/dev/null 2>&1 || exit 1
 
