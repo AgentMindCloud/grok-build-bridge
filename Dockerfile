@@ -5,6 +5,14 @@
 # Stage 1 (builder): build tools + relocatable venv with editable install + dev extras.
 # Stage 2 (runtime): slim image, non-root user, venv + source, healthcheck.
 #
+# Safety posture (mirrors README + dashboard):
+#   * Runs as non-root (uid 10001) — no privilege escalation paths inside.
+#   * The CLI's two-layer audit (static regex + Grok LLM) gates every deploy
+#     and fails closed; this image does not bypass or weaken that contract.
+#   * .dockerignore strips .env / secrets / caches; nothing sensitive is baked in.
+#   * tini is PID 1 so `docker stop` cleanly cancels in-flight runs without
+#     leaving the safety scan in an unknown state.
+#
 # Build:   DOCKER_BUILDKIT=1 docker build -t grok-build-bridge:latest .
 # Run:     docker run --rm --env-file .env grok-build-bridge:latest run examples/hello.yaml
 
@@ -52,6 +60,19 @@ RUN --mount=type=cache,target=/root/.cache/pip \
 # Stage 2: runtime
 # =============================================================================
 FROM python:3.11-slim AS runtime
+
+# OCI labels — surfaced by `docker inspect` and registries. The safety
+# posture below is the same one advertised in the README and dashboard:
+# every `grok-build-bridge run` inside this image runs the two-layer
+# audit (static regex + Grok LLM) and fails closed before deploy.
+LABEL org.opencontainers.image.title="grok-build-bridge" \
+      org.opencontainers.image.description="Production-ready X agents from one YAML. Two-layer safety audit, fail-closed by default." \
+      org.opencontainers.image.licenses="Apache-2.0" \
+      org.opencontainers.image.source="https://github.com/AgentMindCloud/grok-build-bridge" \
+      org.opencontainers.image.documentation="https://github.com/AgentMindCloud/grok-build-bridge/blob/main/README.md" \
+      io.grokagents.safety.audit="two-layer (static + grok-llm)" \
+      io.grokagents.safety.fail-mode="closed" \
+      io.grokagents.safety.runs-as="non-root (uid 10001)"
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \

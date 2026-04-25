@@ -95,7 +95,8 @@ def _load_schema() -> dict[str, Any]:
         # Wheel-installed path: schema bundled as package data (future).
         ref = resources.files("grok_build_bridge").joinpath("marketplace/manifest.schema.json")
         if ref.is_file():
-            return json.loads(ref.read_text(encoding="utf-8"))
+            data: dict[str, Any] = json.loads(ref.read_text(encoding="utf-8"))
+            return data
     except (FileNotFoundError, ModuleNotFoundError):
         pass
 
@@ -106,7 +107,8 @@ def _load_schema() -> dict[str, Any]:
         raise BridgeConfigError(
             "marketplace/manifest.schema.json is missing — re-install grok-build-bridge or check out the repo from git.",
         )
-    return json.loads(schema_path.read_text(encoding="utf-8"))
+    data = json.loads(schema_path.read_text(encoding="utf-8"))
+    return data
 
 
 # ---------------------------------------------------------------------------
@@ -120,7 +122,8 @@ def _read_bridge_manifest(generated_dir: Path) -> dict[str, Any]:
     if not candidate.is_file():
         return {}
     try:
-        return json.loads(candidate.read_text(encoding="utf-8"))
+        data: dict[str, Any] = json.loads(candidate.read_text(encoding="utf-8"))
+        return data
     except json.JSONDecodeError:
         logger.warning("bridge.manifest.json at %s is not valid JSON; ignoring", candidate)
         return {}
@@ -198,7 +201,9 @@ def build_manifest(
     # Safety posture mirrors what the bridge knows at publish time.
     safety_block: dict[str, Any] = {}
     if "audit_before_post" in safety_cfg:
-        safety_block["audit_status"] = "passed" if safety_cfg.get("audit_before_post") else "skipped"
+        safety_block["audit_status"] = (
+            "passed" if safety_cfg.get("audit_before_post") else "skipped"
+        )
     if "lucas_veto_enabled" in safety_cfg:
         safety_block["lucas_veto_enabled"] = bool(safety_cfg["lucas_veto_enabled"])
     safety_block["audited_at"] = datetime.now(timezone.utc).isoformat()
@@ -435,9 +440,10 @@ def _replace_manifest_in_zip(zip_path: Path, manifest: dict[str, Any]) -> None:
     # but keep deflate-level identical so the digest only depends on
     # manifest contents + bridge.yaml + (optional) build outputs.
     tmp = zip_path.with_suffix(zip_path.suffix + ".tmp")
-    with zipfile.ZipFile(zip_path, "r") as src, zipfile.ZipFile(
-        tmp, "w", compression=zipfile.ZIP_DEFLATED
-    ) as dst:
+    with (
+        zipfile.ZipFile(zip_path, "r") as src,
+        zipfile.ZipFile(tmp, "w", compression=zipfile.ZIP_DEFLATED) as dst,
+    ):
         for item in src.infolist():
             if item.filename == _MANIFEST_FILENAME:
                 dst.writestr(item, json.dumps(manifest, indent=2, sort_keys=True))

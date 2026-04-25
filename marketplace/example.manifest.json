@@ -10,8 +10,8 @@
     "x": "@JanSol0s"
   },
   "license": "Apache-2.0",
-  "homepage": "https://github.com/agentmindcloud/grok-build-bridge/tree/main/examples/orchestra-bridge",
-  "repository": "https://github.com/agentmindcloud/grok-build-bridge",
+  "homepage": "https://github.com/AgentMindCloud/grok-build-bridge/tree/main/examples/orchestra-bridge",
+  "repository": "https://github.com/AgentMindCloud/grok-build-bridge",
   "bridge": {
     "model": "grok-4.20-0309",
     "target": "x",

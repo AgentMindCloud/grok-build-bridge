@@ -12,11 +12,11 @@
 
 <p align="center">
   <a href="https://pypi.org/project/grok-build-bridge/"><img src="https://img.shields.io/pypi/v/grok-build-bridge?style=for-the-badge&color=00E5FF&labelColor=0A0D14&logo=pypi&logoColor=FFFFFF" alt="PyPI" /></a>
-  <a href="https://github.com/agentmindcloud/grok-build-bridge/releases"><img src="https://img.shields.io/github/v/release/agentmindcloud/grok-build-bridge?style=for-the-badge&color=00D5FF&labelColor=0A0D14&logo=github&logoColor=FFFFFF" alt="GitHub Release" /></a>
-  <a href="https://github.com/agentmindcloud/grok-build-bridge/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/agentmindcloud/grok-build-bridge/ci.yml?style=for-the-badge&label=CI&labelColor=0A0D14&logo=githubactions&logoColor=FFFFFF" alt="CI" /></a>
+  <a href="https://github.com/AgentMindCloud/grok-build-bridge/releases"><img src="https://img.shields.io/github/v/release/AgentMindCloud/grok-build-bridge?style=for-the-badge&color=00D5FF&labelColor=0A0D14&logo=github&logoColor=FFFFFF" alt="GitHub Release" /></a>
+  <a href="https://github.com/AgentMindCloud/grok-build-bridge/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/AgentMindCloud/grok-build-bridge/ci.yml?style=for-the-badge&label=CI&labelColor=0A0D14&logo=githubactions&logoColor=FFFFFF" alt="CI" /></a>
   <a href="https://www.python.org/downloads/"><img src="https://img.shields.io/badge/Python%203.10+-FF4FD8?style=for-the-badge&logo=python&logoColor=FFFFFF&labelColor=0A0D14" alt="Python 3.10+" /></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/License-Apache%202.0-7C3AED?style=for-the-badge&logoColor=FFFFFF&labelColor=0A0D14" alt="License" /></a>
-  <a href="https://github.com/agentmindcloud/grok-agent-orchestra"><img src="https://img.shields.io/badge/Lucas%20Certified-9D4EDD?style=for-the-badge&logoColor=FFFFFF&labelColor=0A0D14" alt="Lucas Certified" /></a>
+  <a href="https://github.com/AgentMindCloud/grok-agent-orchestra"><img src="https://img.shields.io/badge/Lucas%20Certified-9D4EDD?style=for-the-badge&logoColor=FFFFFF&labelColor=0A0D14" alt="Lucas Certified" /></a>
 </p>
 
 <p align="center">
@@ -314,7 +314,7 @@ Worked examples: [`examples/railway.yaml`](examples/railway.yaml) · [`examples/
 
 ## ✦ Templates
 
-`grok-build-bridge templates` lists the six certified templates that ship in the wheel:
+`grok-build-bridge templates` lists the eight certified templates that ship in the wheel:
 
 | Slug | What it does | Source mode | Required env |
 | --- | --- | --- | --- |
@@ -324,6 +324,8 @@ Worked examples: [`examples/railway.yaml`](examples/railway.yaml) · [`examples/
 | [`code-explainer-bot`](grok_build_bridge/templates/code-explainer-bot.yaml) | Point at a Python repo via `$TARGET_REPO` → plain-English explainer thread. | `local` | `TARGET_REPO`, `XAI_API_KEY`, `X_BEARER_TOKEN` |
 | [`grok-build-coding-agent`](grok_build_bridge/templates/grok-build-coding-agent.yaml) | Tiny TypeScript CLI via the `grok-build-cli` → `grok` fallback chain. | `grok-build-cli` | `XAI_API_KEY` |
 | [`research-thread-weekly`](grok_build_bridge/templates/research-thread-weekly.yaml) | Weekly deep-research: 5 parallel queries + web verification → one authoritative thread. | `grok` | `XAI_API_KEY`, `X_BEARER_TOKEN` |
+| [`railway-worker-bot`](grok_build_bridge/templates/railway-worker-bot.yaml) | Hourly trend digest deployed as a Railway worker. Bridge writes `railway.json` and shells out to `railway up`. | `grok` | `XAI_API_KEY`, `X_BEARER_TOKEN` |
+| [`flyio-edge-bot`](grok_build_bridge/templates/flyio-edge-bot.yaml) | Mention-driven X reply bot deployed to Fly.io. Bridge writes `fly.toml` and shells out to `flyctl deploy`. | `grok` | `XAI_API_KEY`, `X_BEARER_TOKEN` |
 
 Scaffold any with `grok-build-bridge init <slug>`. Standalone end-to-end example: [`examples/hello.yaml`](examples/hello.yaml) + [`examples/hello-bridge/main.py`](examples/hello-bridge/main.py).
 
@@ -345,7 +347,7 @@ grok-build-bridge publish bridge.yaml \
     --version 0.1.0 \
     --author "Jan Solo" --author-email jan@agentmind.cloud \
     --license Apache-2.0 \
-    --homepage https://github.com/agentmindcloud/grok-build-bridge \
+    --homepage https://github.com/AgentMindCloud/grok-build-bridge \
     --include-build       # also bundle generated/<slug>/ if you ran the bridge first
 ```
 
@@ -460,34 +462,34 @@ ruff check . && ruff format --check . && mypy grok_build_bridge && pytest
     <td width="33%">
       <h3>🎭 grok-agent-orchestra</h3>
       <p>The multi-agent layer — debate + Lucas veto — that composes with Bridge via <code>grok-orchestra combined</code>.</p>
-      <a href="https://github.com/agentmindcloud/grok-agent-orchestra">Repository →</a>
+      <a href="https://github.com/AgentMindCloud/grok-agent-orchestra">Repository →</a>
     </td>
     <td width="33%">
       <h3>📦 grok-install</h3>
       <p>The universal YAML spec for declarative agents.</p>
-      <a href="https://github.com/agentmindcloud/grok-install">Repository →</a>
+      <a href="https://github.com/AgentMindCloud/grok-install">Repository →</a>
     </td>
     <td width="33%">
       <h3>⚙️ grok-install-cli</h3>
       <p>The CLI Bridge hands off to on <code>deploy.target: x</code>.</p>
-      <a href="https://github.com/agentmindcloud/grok-install-cli">Repository →</a>
+      <a href="https://github.com/AgentMindCloud/grok-install-cli">Repository →</a>
     </td>
   </tr>
   <tr>
     <td>
       <h3>🌟 awesome-grok-agents</h3>
       <p>10 certified templates — complementary to Bridge's 6 codegen templates.</p>
-      <a href="https://github.com/agentmindcloud/awesome-grok-agents">Repository →</a>
+      <a href="https://github.com/AgentMindCloud/awesome-grok-agents">Repository →</a>
     </td>
     <td>
       <h3>📐 grok-yaml-standards</h3>
       <p>12 modular YAML extensions that Bridge-generated agents can reference.</p>
-      <a href="https://github.com/agentmindcloud/grok-yaml-standards">Repository →</a>
+      <a href="https://github.com/AgentMindCloud/grok-yaml-standards">Repository →</a>
     </td>
     <td>
       <h3>🛒 grok-agents-marketplace</h3>
       <p>The live marketplace at <a href="https://grokagents.dev">grokagents.dev</a>.</p>
-      <a href="https://github.com/agentmindcloud/grok-agents-marketplace">Repository →</a>
+      <a href="https://github.com/AgentMindCloud/grok-agents-marketplace">Repository →</a>
     </td>
   </tr>
 </table>
@@ -495,7 +497,7 @@ ruff check . && ruff format --check . && mypy grok_build_bridge && pytest
 ## ✦ Connect
 
 <p align="center">
-  <a href="https://github.com/agentmindcloud">
+  <a href="https://github.com/AgentMindCloud">
     <img src="https://img.shields.io/badge/GitHub-00E5FF?style=for-the-badge&logo=github&logoColor=001018&labelColor=0A0D14" />
   </a>
   <a href="https://x.com/JanSol0s">
@@ -518,8 +520,8 @@ Apache 2.0 — see [`LICENSE`](LICENSE). Copyright © 2026 Jan Solo / AgentMindC
 
 ## ✦ Quick Links
 
-- 🎭 **[grok-agent-orchestra](https://github.com/agentmindcloud/grok-agent-orchestra)** — multi-agent debate + Lucas veto, the upstream half of this pipeline.
-- 📦 **[grok-install](https://github.com/agentmindcloud/grok-install)** — universal YAML spec for declarative agents; the runtime Bridge hands off to.
+- 🎭 **[grok-agent-orchestra](https://github.com/AgentMindCloud/grok-agent-orchestra)** — multi-agent debate + Lucas veto, the upstream half of this pipeline.
+- 📦 **[grok-install](https://github.com/AgentMindCloud/grok-install)** — universal YAML spec for declarative agents; the runtime Bridge hands off to.
 - 📚 **[Documentation](docs/)** — `build-bridge.md`, `vscode-integration.md` (full docs site coming soon).
 - 💬 **Discord** — _coming soon._ Announcements via [@JanSol0s](https://x.com/JanSol0s) until the server opens.
 - 🐦 **[X / @JanSol0s](https://x.com/JanSol0s)** — release notes, demos, support.

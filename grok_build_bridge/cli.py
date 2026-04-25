@@ -479,7 +479,9 @@ def publish_cmd(
     ),
     homepage: str = typer.Option(None, "--homepage", help="Homepage URL for the published agent."),
     repository: str = typer.Option(None, "--repository", help="Source repository URL."),
-    verbose: bool = typer.Option(False, "--verbose", "-v", help="Print full tracebacks on failure."),
+    verbose: bool = typer.Option(
+        False, "--verbose", "-v", help="Print full tracebacks on failure."
+    ),
 ) -> None:
     """📦  Package a built agent for the future grokagents.dev marketplace."""
     print_banner(console)
@@ -509,16 +511,16 @@ def publish_cmd(
     table = Table.grid(padding=(0, 2))
     table.add_column(style="brand.primary", no_wrap=True)
     table.add_column(style="brand.muted")
-    table.add_row("name",    result.manifest["name"])
+    table.add_row("name", result.manifest["name"])
     table.add_row("version", result.manifest["version"])
-    table.add_row("target",  result.manifest["bridge"]["target"])
-    table.add_row("model",   result.manifest["bridge"]["model"])
+    table.add_row("target", result.manifest["bridge"]["target"])
+    table.add_row("model", result.manifest["bridge"]["model"])
     if result.dry_run:
         table.add_row("status", "🛡️  dry-run (no zip written)")
     else:
         size_kb = result.manifest.get("package", {}).get("size_bytes", 0) / 1024
         table.add_row("package", f"{result.package_path}  ({size_kb:.1f} KB)")
-        table.add_row("sha256",  result.manifest.get("package", {}).get("sha256", "")[:16] + "…")
+        table.add_row("sha256", result.manifest.get("package", {}).get("sha256", "")[:16] + "…")
         registry = result.manifest.get("marketplace", {}).get("registry_url", "")
         table.add_row("future upload", registry)
 

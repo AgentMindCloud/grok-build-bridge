@@ -47,7 +47,9 @@ def _example_config() -> dict[str, object]:
 
 
 def test_build_manifest_pins_schema_version_and_required_blocks(tmp_path: Path) -> None:
-    manifest = build_manifest(_example_config(), version="1.2.3", bridge_path=tmp_path / "bridge.yaml")
+    manifest = build_manifest(
+        _example_config(), version="1.2.3", bridge_path=tmp_path / "bridge.yaml"
+    )
     assert manifest["schema_version"] == "1.0"
     assert manifest["name"] == "publish-test-bot"
     assert manifest["version"] == "1.2.3"
@@ -60,13 +62,17 @@ def test_build_manifest_pins_schema_version_and_required_blocks(tmp_path: Path) 
 
 
 def test_build_manifest_emits_safety_block_from_bridge_config(tmp_path: Path) -> None:
-    manifest = build_manifest(_example_config(), version="0.1.0", bridge_path=tmp_path / "bridge.yaml")
+    manifest = build_manifest(
+        _example_config(), version="0.1.0", bridge_path=tmp_path / "bridge.yaml"
+    )
     assert manifest["safety"]["lucas_veto_enabled"] is True
     assert manifest["safety"]["audit_status"] == "passed"
 
 
 def test_build_manifest_falls_back_to_unknown_author(tmp_path: Path) -> None:
-    manifest = build_manifest(_example_config(), version="0.1.0", bridge_path=tmp_path / "bridge.yaml")
+    manifest = build_manifest(
+        _example_config(), version="0.1.0", bridge_path=tmp_path / "bridge.yaml"
+    )
     assert manifest["author"] == {"name": "Unknown"}
     assert manifest["license"] == "Apache-2.0"
 
