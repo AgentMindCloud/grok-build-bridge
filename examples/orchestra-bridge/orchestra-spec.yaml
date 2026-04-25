@@ -1,0 +1,151 @@
+# ============================================================================
+# Orchestra spec: weekly-research-publisher
+#
+# This is a Grok Agent Orchestra spec, NOT a Bridge spec. Orchestra runs a
+# multi-agent debate + research pipeline, applies the Lucas veto gate, and
+# emits a research brief that the sibling `bridge.yaml` will then turn into
+# a safely-deployed X agent.
+#
+# Required env vars:
+#   XAI_API_KEY      — xAI key used by every Orchestra agent.
+#   X_BEARER_TOKEN   — X API bearer token used by the researcher's x_search.
+#   LUCAS_VETO_RULES — optional path to a YAML file with extra veto criteria;
+#                      defaults to the inline `veto_criteria` below.
+#
+# Estimated cost per run:
+#   ~$0.80  (≈25K input + ≈40K output tokens, three high-effort agents).
+#   Run ad-hoc whenever the topic shifts; the downstream Bridge agent then
+#   re-publishes weekly using the cached research brief.
+#
+# Outputs (written to ./out/ by Orchestra):
+#   research-brief.md   — synthesized brief (consumed by bridge.yaml prompt).
+#   debate-transcript.json — full agent transcript, useful for audit trails.
+#   veto-report.json    — Lucas veto verdict + reasoning, empty if PASS.
+# ============================================================================
+
+version: "1.0"
+name: weekly-research-publisher
+description: >
+  Multi-agent deep-research pipeline. Researcher gathers, Critic challenges,
+  Synthesizer merges, Lucas vetoes anything that fails alignment / accuracy
+  / safety. Output is a research brief that Grok Build Bridge consumes to
+  generate the live X publisher.
+
+# Topic is the only knob you usually flip between runs. Override at the CLI:
+#   grok-orchestra run orchestra-spec.yaml --set topic="post-AGI labour markets"
+topic: "Progress in Reinforcement Learning from Human Feedback (RLHF)"
+
+# ---------------------------------------------------------------------------
+# Agents — one role per agent, mirroring the classic adversarial-research
+# setup. Each agent declares its own model + tools so Orchestra can route
+# tool calls deterministically.
+# ---------------------------------------------------------------------------
+agents:
+
+  - id: researcher
+    role: |
+      You are a primary-source researcher. Surface 8-12 candidate findings on
+      the topic. For each, attach the strongest primary source you can find
+      (arxiv, .edu, .gov, peer-reviewed, official org blog). Reject hearsay
+      and second-hand reporting. Output JSON: list[{claim, source_url,
+      source_type, published_date}].
+    model: grok-4.20-0309
+    reasoning_effort: high
+    tools: [x_search, web_search]
+    max_tokens: 12000
+
+  - id: critic
+    role: |
+      You are a contrarian peer reviewer. For each finding from the researcher,
+      assert the strongest possible counter-evidence or methodological flaw.
+      If the finding survives critique, mark it `accepted=true`. Otherwise
+      mark `accepted=false` and explain why. Output JSON: list[{claim,
+      counter_evidence, accepted, reasoning}].
+    model: grok-4.20-0309
+    reasoning_effort: high
+    tools: [web_search]
+    max_tokens: 10000
+
+  - id: synthesizer
+    role: |
+      Merge the surviving findings into a publication-ready research brief.
+      Order by importance, dedupe near-duplicates, and write a 200-word TL;DR
+      followed by 5-7 evidence sections. Each section must cite the primary
+      source URL and the publication date. Output Markdown.
+    model: grok-4.20-0309
+    reasoning_effort: medium
+    tools: []
+    max_tokens: 8000
+
+  # ---- Lucas veto gate -----------------------------------------------------
+  # The Lucas veto is the *hard-stop* layer: even after debate, this agent
+  # can refuse to release the brief. Refusal is binary; no soft-fail path.
+  # Bridge's downstream `safety_scan` is a complementary, code-level check;
+  # Lucas focuses on epistemic + alignment + reputational risk in the brief.
+  - id: lucas_veto
+    role: |
+      You are Lucas, the final veto gate. Read the synthesized brief and
+      output one of: PASS / VETO. VETO if ANY of the criteria below trip.
+      Output JSON: {verdict, tripped_criteria: list[string], reasoning}.
+    model: grok-4.20-0309
+    reasoning_effort: xhigh
+    tools: []
+    max_tokens: 4000
+    veto_criteria:
+      - "Brief contains an unsourced quantitative claim"
+      - "A cited source is older than 24 months without justification"
+      - "Brief takes a partisan political stance not grounded in evidence"
+      - "Brief recommends action that could cause real-world harm"
+      - "Brief misrepresents the consensus position of cited sources"
+      - "Brief contains personally identifying information about non-public figures"
+
+# ---------------------------------------------------------------------------
+# Workflow — phases run sequentially. Each phase declares its consumed and
+# produced artifacts so Orchestra can short-circuit on cache hits.
+# ---------------------------------------------------------------------------
+workflow:
+
+  - phase: research
+    agent: researcher
+    input: { topic: "${topic}" }
+    output: candidate_findings.json
+
+  - phase: debate
+    agents: [critic, researcher]   # rebuttals + responses
+    rounds: 2
+    input: candidate_findings.json
+    output: debated_findings.json
+
+  - phase: synthesize
+    agent: synthesizer
+    input: debated_findings.json
+    output: research-brief.md
+
+  # Lucas runs LAST so it sees the final artefact a human would publish.
+  # On VETO, Orchestra exits non-zero and `bridge.yaml` is never invoked.
+  - phase: veto_gate
+    agent: lucas_veto
+    input: research-brief.md
+    output: veto-report.json
+    on_veto: abort   # | regenerate | escalate
+
+# ---------------------------------------------------------------------------
+# Output — what Orchestra writes to ./out/. The bridge.yaml in this folder
+# expects `out/research-brief.md` to exist before it runs.
+# ---------------------------------------------------------------------------
+output:
+  dir: ./out
+  artifacts:
+    - research-brief.md
+    - debate-transcript.json
+    - veto-report.json
+
+# ---------------------------------------------------------------------------
+# Bridge handoff — a minimal manifest the Bridge can read to wire safety
+# defaults. The Bridge does NOT read the spec directly; it re-states the
+# decisions in bridge.yaml so the two artefacts remain auditable in isolation.
+# ---------------------------------------------------------------------------
+handoff:
+  bridge_spec: ./bridge.yaml
+  brief_path: ./out/research-brief.md
+  require_lucas_pass: true

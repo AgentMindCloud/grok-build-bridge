@@ -1,0 +1,111 @@
+# ============================================================================
+# Bridge spec: weekly-research-publisher
+#
+# Companion to orchestra-spec.yaml in this folder. Run AFTER Orchestra has
+# produced ./out/research-brief.md and a PASS verdict in ./out/veto-report.json.
+#
+# Required env vars:
+#   XAI_API_KEY      — xAI key used to generate + audit the agent.
+#   X_BEARER_TOKEN   — X API bearer token used by the published agent.
+#
+# Estimated cost per run:
+#   ~$0.55  (≈20K input + ≈30K output tokens at reasoning_effort: high).
+#   The agent runs once per week after deploy; build cost is one-time.
+#
+# Expected output:
+#   A single Python file (`main.py`) wrapped by the Bridge runtime that, every
+#   Monday at 13:00 UTC, publishes a 7-10 post research thread on X. Each post
+#   cites a primary source vetted during the Orchestra debate.
+# ============================================================================
+
+version: "1.0"
+name: weekly-research-publisher
+description: Publishes the Orchestra-vetted research brief as a weekly X thread. Lucas veto + Bridge safety audit gate every release.
+
+build:
+  source: grok
+  language: python
+  entrypoint: main.py
+  required_tools:
+    - x_search        # for cite-up updates between Orchestra runs
+    - web_search      # for source freshness checks before posting
+  grok_prompt: |
+    You are generating ONE Python 3.11 file, `main.py`, that publishes a
+    weekly research thread on X. Output one fenced ```python code block and
+    nothing else.
+
+    INPUT BRIEF
+    -----------
+    The agent reads `./out/research-brief.md` (produced by the sibling
+    Orchestra spec). The brief contains a 200-word TL;DR followed by 5-7
+    evidence sections, each citing a primary source URL. Treat the brief
+    as the authoritative content; do NOT regenerate findings, only format
+    them for X.
+
+    HARD CONSTRAINTS
+    ----------------
+      - Use the xai-sdk Python client for any model calls.
+      - Use httpx with explicit timeout=15.0 for every network call.
+      - NEVER use shell=True, eval(), exec(), os.system(), or pickle.
+      - Read XAI_API_KEY and X_BEARER_TOKEN from os.environ. If either is
+        missing, log to stderr and sys.exit(2).
+      - Use tenacity for retries (3 attempts, exp backoff min=2, max=16) on
+        every X API call.
+      - Refuse to post if `./out/veto-report.json` does not contain
+        `{"verdict": "PASS"}`. Log the trip-criteria and sys.exit(3).
+
+    BEHAVIOUR
+    ---------
+      1. `load_brief() -> Brief`
+         Parse `./out/research-brief.md` into structured sections.
+
+      2. `verify_freshness(brief: Brief) -> Brief`
+         For each cited source, web_search for "site:<domain> <title>" to
+         confirm the URL still resolves. Drop any section whose source has
+         404'd in the last 24h.
+
+      3. `compose_thread(brief: Brief) -> list[str]`
+         Render the brief into ≤10 posts:
+            post 0: "Weekly research: {topic} — {today_iso}\n\n{tl_dr}"
+                    in ≤280 chars (truncate TL;DR if needed).
+            posts 1..N: one section each. Format:
+                "{section_title}
+                 {one_sentence_finding}
+                 source: {url} ({published_date})"
+            post N+1: "Methodology: {orchestra_run_id} · vetted by Lucas
+                       on {veto_pass_date}."
+         Enforce len(post) ≤ 280 before every API call; raise ValueError
+         if violated.
+
+      4. `publish(thread: list[str])`
+         Post sequentially with 2s sleeps. Capture each post id; print
+         {topic, posted_ids, brief_path, veto_pass_date} to stdout as JSON.
+
+    Top-level `if __name__ == "__main__": main()`.
+
+deploy:
+  target: x
+  runtime: grok-install
+  post_to_x: true
+  schedule: "0 13 * * 1"        # Mondays 13:00 UTC
+  safety_scan: true             # Bridge's static + Grok-LLM code audit
+
+agent:
+  model: grok-4.20-0309
+  reasoning_effort: high
+  personality: >
+    Rigorous researcher voice. Cites primary sources before claims. Acknowledges
+    open questions rather than glossing over them. Never editorialises beyond
+    what the Orchestra-vetted brief supports.
+
+# ----------------------------------------------------------------------------
+# Safety — TWO gates run in series before any post hits X:
+#   1. Lucas veto (orchestra-side)  — refuses bad briefs at synthesis time.
+#   2. Bridge safety audit (here)   — static regex + Grok LLM review of the
+#                                     generated Python; fails closed.
+# Both must PASS; either can stop the deploy.
+# ----------------------------------------------------------------------------
+safety:
+  audit_before_post: true        # Grok-in-the-loop audit of every thread
+  max_tokens_per_run: 30000
+  lucas_veto_enabled: true       # Honours ./out/veto-report.json verdict
