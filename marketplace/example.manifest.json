@@ -1,0 +1,42 @@
+{
+  "schema_version": "1.0",
+  "name": "weekly-research-publisher",
+  "version": "0.1.0",
+  "description": "Multi-agent vetted research brief, published as a weekly X thread. Lucas veto + Bridge audit gate every release.",
+  "author": {
+    "name": "Jan Solo",
+    "email": "jan@agentmind.cloud",
+    "url": "https://grokagents.dev",
+    "x": "@JanSol0s"
+  },
+  "license": "Apache-2.0",
+  "homepage": "https://github.com/agentmindcloud/grok-build-bridge/tree/main/examples/orchestra-bridge",
+  "repository": "https://github.com/agentmindcloud/grok-build-bridge",
+  "bridge": {
+    "model": "grok-4.20-0309",
+    "target": "x",
+    "language": "python",
+    "required_tools": ["x_search", "web_search"],
+    "required_env": ["XAI_API_KEY", "X_BEARER_TOKEN"],
+    "estimated_tokens": 22000,
+    "schedule": "0 13 * * 1"
+  },
+  "categories": ["research", "x-deploy", "scheduled"],
+  "keywords": ["weekly", "research", "thread", "primary-source", "lucas-veto"],
+  "safety": {
+    "audit_status": "passed",
+    "lucas_veto_enabled": true,
+    "audit_findings": 0,
+    "audited_at": "2026-04-25T13:00:00Z"
+  },
+  "package": {
+    "files": ["bridge.yaml", "main.py", "manifest.json"],
+    "size_bytes": 24576,
+    "sha256": "9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08"
+  },
+  "marketplace": {
+    "status": "draft",
+    "published_at": null,
+    "registry_url": "https://grokagents.dev/agents/weekly-research-publisher"
+  }
+}

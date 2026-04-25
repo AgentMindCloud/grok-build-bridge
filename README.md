@@ -254,7 +254,7 @@ Bottom line: **what used to take a week of glue code, manual safety review, and 
 
 ## ✦ CLI
 
-Five commands. Every failure path prints a branded Rich panel with a "What to try next" list and exits with a typed code so scripts can react.
+Six commands. Every failure path prints a branded Rich panel with a "What to try next" list and exits with a typed code so scripts can react.
 
 | Command | What it does |
 | --- | --- |
@@ -262,6 +262,7 @@ Five commands. Every failure path prints a branded Rich panel with a "What to tr
 | `grok-build-bridge validate <file.yaml>` | Parse, schema-validate, apply defaults, and pretty-print the resolved config — no network. |
 | `grok-build-bridge templates` | List bundled templates with description, required env, estimated tokens, categories. |
 | `grok-build-bridge init <slug>` | Copy a bundled template to `--out/-o` (default: cwd). `--force` skips the overwrite prompt. |
+| `grok-build-bridge publish <file.yaml>` | 📦 Package + manifest for the future [grokagents.dev](https://grokagents.dev) marketplace. Flags: `--version`, `--out/-o`, `--include-build`, `--dry-run`, `--author`, `--author-email`, `--license`, `--homepage`, `--repository`. |
 | `grok-build-bridge version` | Print grok-build-bridge / xai-sdk / python versions. |
 
 **Global flags:** `--version/-V` · `--no-color` (also honours `NO_COLOR`).
@@ -326,6 +327,40 @@ Worked examples: [`examples/railway.yaml`](examples/railway.yaml) · [`examples/
 
 Scaffold any with `grok-build-bridge init <slug>`. Standalone end-to-end example: [`examples/hello.yaml`](examples/hello.yaml) + [`examples/hello-bridge/main.py`](examples/hello-bridge/main.py).
 
+## ✦ Publish to Marketplace <span style="font-weight:400">_(preview)_</span>
+
+<p align="center">
+  <a href="https://grokagents.dev"><img src="https://img.shields.io/badge/grokagents.dev-coming%20soon-9D4EDD?style=for-the-badge&logoColor=FFFFFF&labelColor=0A0D14" alt="grokagents.dev coming soon" /></a>
+  <img src="https://img.shields.io/badge/manifest%20schema-v1.0-00E5FF?style=for-the-badge&logoColor=001018&labelColor=0A0D14" />
+</p>
+
+The agent registry at [grokagents.dev](https://grokagents.dev) is not live yet — but the **packaging contract is**. `grok-build-bridge publish` produces a forward-compatible zip + manifest today; once the registry ships, those packages upload as-is. No re-export, no migration.
+
+```bash
+# Dry-run — build + validate the manifest, write nothing.
+grok-build-bridge publish bridge.yaml --dry-run
+
+# Real package — writes dist/marketplace/<slug>-<version>.zip
+grok-build-bridge publish bridge.yaml \
+    --version 0.1.0 \
+    --author "Jan Solo" --author-email jan@agentmind.cloud \
+    --license Apache-2.0 \
+    --homepage https://github.com/agentmindcloud/grok-build-bridge \
+    --include-build       # also bundle generated/<slug>/ if you ran the bridge first
+```
+
+Each package contains:
+
+- `manifest.json` — validated against [`marketplace/manifest.schema.json`](marketplace/manifest.schema.json). Pinned `schema_version: "1.0"`. The registry will reject unknown versions, so consumers and producers stay in lock-step.
+- `bridge.yaml` — the source of truth for the agent. Everything else can be regenerated from this.
+- *(optional)* generated build artefacts when `--include-build` is set.
+
+The manifest covers the metadata the marketplace will surface in v1: name + version + description + author + license, the bridge subset that matters publicly (model · target · language · required tools/env · estimated tokens · schedule), an optional safety posture block (`audit_status` · `lucas_veto_enabled`), and a verifiable `package` block (file list + size + sha-256 over the zip bytes).
+
+> **Forward-compat note.** The schema is strict (`additionalProperties: false`) and pins `schema_version` to a single enum value. New fields ship behind a version bump; v1.0 packages remain installable forever. See [`marketplace/README.md`](marketplace/README.md) for the migration story.
+
+The CLI does **not** upload anywhere yet. `--upload` lands in v0.3.0 once the registry API exists; until then, keep the zip — it is the upload payload.
+
 ## ✦ Safety
 
 Two layers between Grok-generated code and the public timeline.
@@ -377,9 +412,29 @@ Every model call goes through the official [`xai-sdk`](https://github.com/xai-or
     </td>
   </tr>
   <tr>
-    <td colspan="2">
+    <td>
       <h3>🚀 Week 4 · v0.2.0 on PyPI</h3>
       <p>Tagged release via the trusted-publishing pipeline already live on <code>main</code>.</p>
+    </td>
+    <td>
+      <h3>📦 Week 5 · Marketplace Foundation</h3>
+      <p><code>grok-build-bridge publish</code> ships now and writes a forward-compatible zip + <code>manifest.json</code> validated against <a href="marketplace/manifest.schema.json"><code>marketplace/manifest.schema.json</code></a>. <b>✅ Shipped</b> — registry contract pinned at <code>schema_version: "1.0"</code>.</p>
+    </td>
+  </tr>
+  <tr>
+    <td>
+      <h3>🌐 Week 6 · Registry alpha at grokagents.dev</h3>
+      <p>Public read-only browse + search for v1.0 manifests. No upload yet; published zips are usable as private artefacts.</p>
+    </td>
+    <td>
+      <h3>📤 Week 7 · <code>publish --upload</code></h3>
+      <p>Authenticated upload to the registry. Server-side schema check rejects manifests it does not understand. Sigstore signatures arrive with v1.1.</p>
+    </td>
+  </tr>
+  <tr>
+    <td colspan="2">
+      <h3>📥 Week 8 · <code>install &lt;slug&gt;</code> from the marketplace</h3>
+      <p>Reverse direction — pull a published agent's <code>bridge.yaml</code> + optional build artefacts back into a local checkout, ready to dry-run and re-deploy.</p>
     </td>
   </tr>
 </table>

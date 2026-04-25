@@ -81,6 +81,53 @@ Orchestra ships teams."
 - [ ] **Post-launch retro.** Public write-up of what shipped, what
   slipped, and what the next 30 days look like.
 
+## Week 5 — Marketplace foundation (✅ shipped)
+
+Aim: the agent registry at [grokagents.dev](https://grokagents.dev) has a
+forward-compatible packaging contract before the website ships, so packages
+produced today upload as-is once the registry goes live.
+
+- [x] **`grok-build-bridge publish`.** New CLI command that reads a
+  bridge YAML, builds a manifest from the config + any sibling
+  `bridge.manifest.json`, validates it against
+  [`marketplace/manifest.schema.json`](marketplace/manifest.schema.json),
+  and writes `dist/marketplace/<slug>-<version>.zip`. Flags:
+  `--version`, `--out/-o`, `--include-build`, `--dry-run`, plus author /
+  licence / homepage / repository overrides.
+- [x] **Manifest schema v1.0.** Strict (`additionalProperties: false`),
+  pinned `schema_version`, optional `safety` and `package` blocks. The
+  `package` block carries a sha-256 over the zip bytes so the registry
+  can verify uploads.
+- [x] **Bundled foundation.** `marketplace/` folder with the schema, an
+  example manifest, and a forward-compatibility note. The schema and the
+  example are validated against the JSON Schema 2020-12 meta-schema in
+  CI via the publish test suite.
+
+## Week 6 — Registry alpha at grokagents.dev
+
+- [ ] **Read-only browse.** Public listing of v1.0 manifests. Search by
+  category / keyword / target.
+- [ ] **Registry verifier.** Open-source script that re-runs
+  `manifest.schema.json` validation server-side; rejects manifests it
+  does not understand.
+- [ ] **First five agents seeded.** The bundled templates plus the
+  Orchestra-paired example land as canonical entries.
+
+## Week 7 — `publish --upload`
+
+- [ ] **Authenticated upload.** Token auth lands; the CLI gains
+  `--upload` and a one-time `grok-build-bridge auth login` flow.
+- [ ] **Sigstore signing (v1.1 schema bump).** Packages carry a Sigstore
+  signature; the registry rejects unsigned uploads in v1.1.
+
+## Week 8 — `install <slug>` from the marketplace
+
+- [ ] **Reverse direction.** `grok-build-bridge install <slug>` pulls a
+  published agent's `bridge.yaml` (and optional build artefacts) back
+  into a local checkout, ready to dry-run and re-deploy.
+- [ ] **Per-agent README import.** Marketplace surface includes a short
+  human-authored README that ships back with the install.
+
 ---
 
 ## Tracking

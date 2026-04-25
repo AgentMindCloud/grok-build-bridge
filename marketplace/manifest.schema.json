@@ -1,0 +1,112 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://agentmind.cloud/grok-build-bridge/marketplace/manifest.schema.json",
+  "title": "Grok Agents Marketplace manifest",
+  "description": "Forward-compatible manifest emitted with every package produced by `grok-build-bridge publish`. The marketplace registry at grokagents.dev consumes this file as the source of truth for an agent's metadata, safety posture, and bridge configuration.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "name", "version", "description", "author", "license", "bridge"],
+  "properties": {
+    "schema_version": {
+      "description": "Pinned manifest schema version. Bump only when fields are added/removed; consumers should refuse manifests they do not understand.",
+      "type": "string",
+      "enum": ["1.0"]
+    },
+    "name": {
+      "description": "Slug — same DNS/URL-safe shape as `bridge.yaml#name` so registry URLs stay stable.",
+      "type": "string",
+      "pattern": "^[a-z0-9-]{3,64}$"
+    },
+    "version": {
+      "description": "Semantic version of this published agent package. Independent from grok-build-bridge's own version.",
+      "type": "string",
+      "pattern": "^\\d+\\.\\d+\\.\\d+(?:-[0-9A-Za-z.-]+)?$"
+    },
+    "description": {
+      "description": "One-line summary, capped at 280 chars so the marketplace card fits a single X post.",
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 280
+    },
+    "author": {
+      "description": "Required author block. Email/url/x are optional but at least the name must be present so attribution is unambiguous.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name"],
+      "properties": {
+        "name":  { "type": "string", "minLength": 1 },
+        "email": { "type": "string", "format": "email" },
+        "url":   { "type": "string", "format": "uri" },
+        "x":     { "type": "string", "pattern": "^@[A-Za-z0-9_]{1,15}$" }
+      }
+    },
+    "license": {
+      "description": "SPDX identifier or short licence name. Free-form so non-OSI licences can publish.",
+      "type": "string",
+      "minLength": 1
+    },
+    "homepage":   { "type": "string", "format": "uri" },
+    "repository": { "type": "string", "format": "uri" },
+    "bridge": {
+      "description": "Subset of bridge.yaml that the marketplace surfaces in its UI — model, target, and language users care about. Excludes secrets and the full prompt body.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["model", "target", "language"],
+      "properties": {
+        "model":             { "type": "string" },
+        "target":            { "type": "string", "enum": ["x", "vercel", "render", "railway", "flyio", "local"] },
+        "language":          { "type": "string", "enum": ["python", "typescript", "go"] },
+        "required_tools":    { "type": "array", "items": {"type": "string"}, "uniqueItems": true },
+        "required_env":      { "type": "array", "items": {"type": "string"}, "uniqueItems": true },
+        "estimated_tokens":  { "type": "integer", "minimum": 0 },
+        "schedule":          { "type": "string", "minLength": 1 }
+      }
+    },
+    "categories": {
+      "description": "Free-form classification tags. The marketplace UI groups by these.",
+      "type": "array",
+      "items": { "type": "string", "minLength": 1 },
+      "uniqueItems": true,
+      "maxItems": 10
+    },
+    "keywords": {
+      "description": "Search keywords. Independent from `categories` — keywords drive search ranking, categories drive navigation.",
+      "type": "array",
+      "items": { "type": "string", "minLength": 1 },
+      "uniqueItems": true,
+      "maxItems": 20
+    },
+    "safety": {
+      "description": "Safety posture at publish time. The registry can reject submissions where `audit_status != \"passed\"` and `lucas_veto_enabled = false` for X-bound agents.",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "audit_status":       { "type": "string", "enum": ["passed", "skipped", "failed"] },
+        "lucas_veto_enabled": { "type": "boolean" },
+        "audit_findings":     { "type": "integer", "minimum": 0 },
+        "audited_at":         { "type": "string", "format": "date-time" }
+      }
+    },
+    "package": {
+      "description": "What the zip on disk contains. `sha256` is computed over the zip bytes and lets the registry verify the upload matches what was published.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["files", "size_bytes", "sha256"],
+      "properties": {
+        "files":      { "type": "array", "items": {"type": "string"}, "minItems": 1, "uniqueItems": true },
+        "size_bytes": { "type": "integer", "minimum": 0 },
+        "sha256":     { "type": "string", "pattern": "^[a-f0-9]{64}$" }
+      }
+    },
+    "marketplace": {
+      "description": "Registry-side state. Always `draft` at publish time; the registry flips this to `published` once the upload is accepted.",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "status":        { "type": "string", "enum": ["draft", "published", "deprecated"] },
+        "published_at":  { "type": ["string", "null"], "format": "date-time" },
+        "registry_url":  { "type": "string", "format": "uri" }
+      }
+    }
+  }
+}

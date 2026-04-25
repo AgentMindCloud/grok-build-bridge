@@ -1,11 +1,12 @@
 """Typer + Rich command-line interface for ``grok-build-bridge``.
 
-Five user-facing commands:
+Six user-facing commands:
 
 * ``run``       — build, safety-scan, and deploy from one YAML.
 * ``validate``  — parser-only pretty-print of the resolved config.
 * ``templates`` — list bundled templates with description and required env.
 * ``init``      — copy a bundled template to the user's working directory.
+* ``publish``   — package a built agent for the future grokagents.dev marketplace.
 * ``version``   — show grok-build-bridge / xai-sdk / python versions.
 
 Every failure path renders a red Rich panel with a "What to try next"
@@ -428,6 +429,107 @@ def init_cmd(
             border_style="brand.success",
         )
     )
+
+
+# ---------------------------------------------------------------------------
+# `publish` command — marketplace packaging foundation
+# ---------------------------------------------------------------------------
+
+
+@app.command("publish")
+def publish_cmd(
+    config: Path = typer.Argument(
+        ...,
+        exists=False,
+        dir_okay=False,
+        readable=True,
+        help="Path to the bridge YAML file.",
+    ),
+    package_version: str = typer.Option(
+        "0.1.0",
+        "--version",
+        help="Semantic version of the marketplace package (independent of grok-build-bridge's own version).",
+    ),
+    out: Path = typer.Option(
+        Path("dist") / "marketplace",
+        "--out",
+        "-o",
+        help="Directory to write <slug>-<version>.zip into.",
+    ),
+    include_build: bool = typer.Option(
+        False,
+        "--include-build",
+        help="Bundle files from generated/<slug>/ into the package (requires a prior `run`).",
+    ),
+    dry_run: bool = typer.Option(
+        False,
+        "--dry-run",
+        help="🛡️  Build + validate the manifest but do not write the zip.",
+    ),
+    author_name: str = typer.Option(
+        None,
+        "--author",
+        help="Author display name for the manifest. Defaults to 'Unknown' if omitted.",
+    ),
+    author_email: str = typer.Option(None, "--author-email", help="Author email for the manifest."),
+    license_id: str = typer.Option(
+        "Apache-2.0",
+        "--license",
+        help="SPDX licence id or short name; written as the manifest's `license` field.",
+    ),
+    homepage: str = typer.Option(None, "--homepage", help="Homepage URL for the published agent."),
+    repository: str = typer.Option(None, "--repository", help="Source repository URL."),
+    verbose: bool = typer.Option(False, "--verbose", "-v", help="Print full tracebacks on failure."),
+) -> None:
+    """📦  Package a built agent for the future grokagents.dev marketplace."""
+    print_banner(console)
+    try:
+        from grok_build_bridge.publish import publish
+
+        author_overrides: dict[str, Any] = {}
+        if author_name:
+            author_overrides["name"] = author_name
+        if author_email:
+            author_overrides["email"] = author_email
+
+        result = publish(
+            config,
+            version=package_version,
+            out_dir=out,
+            include_build=include_build,
+            dry_run=dry_run,
+            author_overrides=author_overrides or None,
+            license_id=license_id,
+            homepage=homepage,
+            repository=repository,
+        )
+    except (BridgeConfigError, BridgeRuntimeError) as exc:
+        _handle_and_exit(exc, verbose=verbose)
+
+    table = Table.grid(padding=(0, 2))
+    table.add_column(style="brand.primary", no_wrap=True)
+    table.add_column(style="brand.muted")
+    table.add_row("name",    result.manifest["name"])
+    table.add_row("version", result.manifest["version"])
+    table.add_row("target",  result.manifest["bridge"]["target"])
+    table.add_row("model",   result.manifest["bridge"]["model"])
+    if result.dry_run:
+        table.add_row("status", "🛡️  dry-run (no zip written)")
+    else:
+        size_kb = result.manifest.get("package", {}).get("size_bytes", 0) / 1024
+        table.add_row("package", f"{result.package_path}  ({size_kb:.1f} KB)")
+        table.add_row("sha256",  result.manifest.get("package", {}).get("sha256", "")[:16] + "…")
+        registry = result.manifest.get("marketplace", {}).get("registry_url", "")
+        table.add_row("future upload", registry)
+
+    title = "📦  publish — dry-run" if result.dry_run else "📦  publish — package ready"
+    console.print(Panel(table, border_style="brand.primary", title=title))
+
+    if not result.dry_run:
+        console.print(
+            "[brand.muted]grokagents.dev upload endpoint is not live yet. "
+            "Keep the zip; `--upload` lands in v0.3.0.[/]"
+        )
 
 
 # ---------------------------------------------------------------------------
