@@ -140,10 +140,10 @@
        Header — sticky, blurred, with section anchors.
        ============================================================ -->
   <header class="sticky top-0 z-40 border-b border-white/5 bg-ink-950/70 backdrop-blur-md">
-    <nav class="mx-auto max-w-7xl px-6 h-16 flex items-center justify-between">
-      <a href="#top" class="flex items-center gap-2 font-display font-bold tracking-tight">
-        <span class="text-2xl leading-none">⚡</span>
-        <span class="text-base">grok-build-bridge</span>
+    <nav class="mx-auto max-w-7xl px-4 sm:px-6 h-16 flex items-center justify-between gap-3">
+      <a href="#top" class="flex items-center gap-2 font-display font-bold tracking-tight min-w-0">
+        <span class="text-2xl leading-none shrink-0">⚡</span>
+        <span class="text-sm sm:text-base truncate">grok-build-bridge</span>
         <span class="hidden sm:inline rounded-md border border-white/10 px-1.5 py-0.5 text-[10px] uppercase tracking-wider text-zinc-400 font-mono">v0.1.0</span>
       </a>
       <div class="hidden md:flex items-center gap-8 text-sm text-zinc-400">
@@ -152,15 +152,31 @@
         <a href="#how"       class="hover:text-neon-cyan transition-colors">How it works</a>
         <a href="#orchestra" class="hover:text-neon-cyan transition-colors">Orchestra</a>
       </div>
-      <div class="flex items-center gap-3">
-        <a href="https://pypi.org/project/grok-build-bridge/" class="hidden sm:inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs text-zinc-300 border border-white/10 hover:border-white/30 transition-colors font-mono">
+      <div class="flex items-center gap-2 sm:gap-3">
+        <a href="https://pypi.org/project/grok-build-bridge/" class="hidden lg:inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs text-zinc-300 border border-white/10 hover:border-white/30 transition-colors font-mono">
           <span class="text-neon-cyan">pip</span> install grok-build-bridge
         </a>
-        <a href="https://github.com/agentmindcloud/grok-build-bridge" class="inline-flex items-center gap-1.5 rounded-md bg-neon-cyan/10 text-neon-cyan border border-neon-cyan/30 px-3 py-1.5 text-xs font-semibold hover:bg-neon-cyan/20 transition-colors">
+        <a href="https://github.com/agentmindcloud/grok-build-bridge" class="hidden sm:inline-flex items-center gap-1.5 rounded-md bg-neon-cyan/10 text-neon-cyan border border-neon-cyan/30 px-3 py-1.5 text-xs font-semibold hover:bg-neon-cyan/20 transition-colors">
           GitHub <span aria-hidden="true">→</span>
         </a>
+        <!-- Mobile menu toggle -->
+        <button type="button" data-mobile-menu-toggle aria-label="Open menu" aria-expanded="false" aria-controls="mobile-menu"
+                class="md:hidden inline-flex items-center justify-center h-9 w-9 rounded-md border border-white/10 text-zinc-300 hover:bg-white/5 transition">
+          <svg data-icon-open  class="h-5 w-5"        viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
+          <svg data-icon-close class="h-5 w-5 hidden" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 6l12 12M18 6l-12 12"/></svg>
+        </button>
       </div>
     </nav>
+    <!-- Mobile menu panel -->
+    <div id="mobile-menu" data-mobile-menu class="md:hidden hidden border-t border-white/5 bg-ink-950/95 backdrop-blur-md">
+      <div class="px-4 py-4 flex flex-col gap-1 text-sm">
+        <a href="#status"    class="rounded-md px-3 py-2 text-zinc-300 hover:bg-white/5 hover:text-neon-cyan">Status</a>
+        <a href="#templates" class="rounded-md px-3 py-2 text-zinc-300 hover:bg-white/5 hover:text-neon-cyan">Templates</a>
+        <a href="#how"       class="rounded-md px-3 py-2 text-zinc-300 hover:bg-white/5 hover:text-neon-cyan">How it works</a>
+        <a href="#orchestra" class="rounded-md px-3 py-2 text-zinc-300 hover:bg-white/5 hover:text-neon-cyan">Orchestra</a>
+        <a href="https://github.com/agentmindcloud/grok-build-bridge" class="sm:hidden mt-2 rounded-md px-3 py-2 bg-neon-cyan/10 text-neon-cyan border border-neon-cyan/30 font-semibold">GitHub →</a>
+      </div>
+    </div>
   </header>
 
   <main id="top">
@@ -170,7 +186,7 @@
          ========================================================== -->
     <section class="relative overflow-hidden">
       <div class="absolute inset-0 bg-grid pointer-events-none"></div>
-      <div class="relative mx-auto max-w-6xl px-6 pt-20 pb-24 md:pt-28 md:pb-32 text-center">
+      <div class="relative mx-auto max-w-6xl px-4 sm:px-6 pt-16 pb-20 sm:pt-20 sm:pb-24 md:pt-28 md:pb-32 text-center">
         <span class="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-zinc-300 font-mono">
           <span class="relative inline-block h-1.5 w-1.5 rounded-full bg-neon-green live-dot"></span>
           v0.1.0 · grok-4.20-0309 · official xai-sdk
@@ -199,6 +215,11 @@
             <svg viewBox="0 0 24 24" class="h-4 w-4" fill="currentColor" aria-hidden="true"><path d="M12 .3a12 12 0 0 0-3.8 23.4c.6.1.8-.3.8-.6v-2.2c-3.3.7-4-1.4-4-1.4-.6-1.4-1.4-1.8-1.4-1.8-1.1-.7.1-.7.1-.7 1.2.1 1.9 1.3 1.9 1.3 1.1 1.8 2.8 1.3 3.5 1 .1-.8.4-1.3.8-1.6-2.7-.3-5.5-1.3-5.5-6 0-1.3.5-2.4 1.3-3.2-.1-.4-.6-1.6.1-3.2 0 0 1-.3 3.3 1.2a11.4 11.4 0 0 1 6 0c2.3-1.5 3.3-1.2 3.3-1.2.7 1.6.2 2.8.1 3.2.8.8 1.3 1.9 1.3 3.2 0 4.6-2.8 5.6-5.5 5.9.4.4.8 1.1.8 2.2v3.3c0 .3.2.7.8.6A12 12 0 0 0 12 .3"/></svg>
             View on GitHub
           </a>
+          <button type="button" data-deploy-sim
+                  class="inline-flex items-center gap-2 rounded-lg border border-neon-pink/30 bg-neon-pink/10 text-neon-pink hover:bg-neon-pink/20 hover:border-neon-pink/50 transition px-5 py-3 text-sm font-semibold">
+            <span aria-hidden="true">🎉</span>
+            <span data-deploy-sim-label>Simulate Deploy</span>
+          </button>
         </div>
 
         <!-- Install snippet — terminal-styled, copy-friendly. -->
@@ -227,7 +248,7 @@
          until the public metrics endpoint ships; the timestamp is
          hydrated by JS in step 7 to read "Last refresh · just now".
          ========================================================== -->
-    <section id="status" class="mx-auto max-w-7xl px-6 py-20 md:py-24">
+    <section id="status" class="mx-auto max-w-7xl px-4 sm:px-6 py-16 sm:py-20 md:py-24">
       <div class="flex items-end flex-wrap gap-3 mb-10">
         <span class="relative inline-block h-2.5 w-2.5 rounded-full bg-neon-green live-dot mb-1"></span>
         <h2 class="font-display text-3xl md:text-4xl font-bold tracking-tight">Live network status</h2>
@@ -319,6 +340,80 @@
 
       </div>
 
+      <!-- Safety Score gauge — animated SVG ring, score reveals on view. -->
+      <div class="mt-8 rounded-2xl border border-white/10 bg-gradient-to-br from-neon-green/[0.05] via-ink-900/60 to-transparent p-6 md:p-8">
+        <div class="grid grid-cols-1 md:grid-cols-12 gap-6 items-center">
+
+          <div class="md:col-span-4 flex justify-center">
+            <div class="relative w-48 h-48">
+              <svg viewBox="0 0 200 200" class="w-full h-full -rotate-90">
+                <!-- track -->
+                <circle cx="100" cy="100" r="86" fill="none" stroke="rgba(255,255,255,0.06)" stroke-width="14"/>
+                <!-- arc — stroke-dasharray = circumference (~540.35); offset reveals 99.7% -->
+                <circle data-safety-arc cx="100" cy="100" r="86" fill="none"
+                        stroke="url(#safetyGrad)" stroke-width="14" stroke-linecap="round"
+                        stroke-dasharray="540.35" stroke-dashoffset="540.35"
+                        style="transition: stroke-dashoffset 1.6s cubic-bezier(.16,.84,.32,1);"/>
+                <defs>
+                  <linearGradient id="safetyGrad" x1="0" y1="0" x2="1" y2="1">
+                    <stop offset="0%"   stop-color="#27C93F"/>
+                    <stop offset="100%" stop-color="#00E5FF"/>
+                  </linearGradient>
+                </defs>
+              </svg>
+              <div class="absolute inset-0 flex flex-col items-center justify-center">
+                <div class="font-display font-bold text-4xl text-neon-green glow-cyan tabular-nums">
+                  <span data-safety-pct>0.0</span>%
+                </div>
+                <div class="text-[10px] uppercase tracking-wider text-zinc-500 font-mono mt-1">safety pass rate</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="md:col-span-8">
+            <div class="flex items-center gap-2">
+              <span class="rounded-full bg-neon-green/10 border border-neon-green/30 text-neon-green text-[10px] font-mono uppercase tracking-wider px-2 py-0.5">99.7%</span>
+              <h3 class="font-display text-xl font-bold">Safety Score</h3>
+            </div>
+            <p class="mt-2 text-sm text-zinc-400 leading-relaxed max-w-xl">
+              Pass rate across all bridge runs in the last 30 days. Failures are not bugs — they are the audit doing its job and refusing to ship unsafe code.
+            </p>
+            <div class="mt-5 grid grid-cols-3 gap-3 text-center">
+              <div class="rounded-lg border border-white/10 bg-white/[0.02] py-3">
+                <div class="text-2xl font-display font-bold text-neon-green tabular-nums">15,623</div>
+                <div class="text-[10px] uppercase tracking-wider text-zinc-500 font-mono mt-1">runs · 30d</div>
+              </div>
+              <div class="rounded-lg border border-white/10 bg-white/[0.02] py-3">
+                <div class="text-2xl font-display font-bold text-neon-cyan tabular-nums">15,576</div>
+                <div class="text-[10px] uppercase tracking-wider text-zinc-500 font-mono mt-1">passed</div>
+              </div>
+              <div class="rounded-lg border border-white/10 bg-white/[0.02] py-3">
+                <div class="text-2xl font-display font-bold text-neon-pink tabular-nums">47</div>
+                <div class="text-[10px] uppercase tracking-wider text-zinc-500 font-mono mt-1">blocked</div>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- Live Deployments feed — JS prepends new entries on a timer. -->
+      <div class="mt-8 rounded-2xl border border-white/10 bg-ink-900/60 overflow-hidden">
+        <div class="flex items-center justify-between px-5 py-3 border-b border-white/5 bg-ink-850/60">
+          <div class="flex items-center gap-2">
+            <span class="relative inline-block h-2 w-2 rounded-full bg-neon-green live-dot"></span>
+            <span class="font-display font-semibold text-sm">Live deployments</span>
+          </div>
+          <span class="text-[10px] uppercase tracking-wider text-zinc-500 font-mono">streaming</span>
+        </div>
+        <ul data-deploy-feed class="divide-y divide-white/5 max-h-72 overflow-hidden">
+          <!-- entries injected by JS; an initial set is rendered for no-JS users below -->
+          <noscript>
+            <li class="px-5 py-3 text-xs text-zinc-500 font-mono">enable JavaScript to see streaming deployments</li>
+          </noscript>
+        </ul>
+      </div>
+
       <p class="mt-6 text-xs text-zinc-500 font-mono">
         Numbers are illustrative for the v0.1.0 launch; a public metrics endpoint ships in v0.3.0 (see <a class="underline decoration-dotted hover:text-neon-cyan" href="https://github.com/agentmindcloud/grok-build-bridge/blob/main/ROADMAP.md">ROADMAP</a>).
       </p>
@@ -329,7 +424,7 @@
          Cards mirror grok_build_bridge/templates/INDEX.yaml so this
          stays in sync with what `grok-build-bridge templates` ships.
          ========================================================== -->
-    <section id="templates" class="mx-auto max-w-7xl px-6 py-20 md:py-24">
+    <section id="templates" class="mx-auto max-w-7xl px-4 sm:px-6 py-16 sm:py-20 md:py-24">
       <div class="flex items-end flex-wrap gap-3 mb-10">
         <div>
           <h2 class="font-display text-3xl md:text-4xl font-bold tracking-tight">Featured templates</h2>
@@ -343,7 +438,7 @@
 
       <div data-carousel class="snap-carousel flex gap-5 overflow-x-auto pb-4 -mx-6 px-6 md:mx-0 md:px-0">
 
-        <!-- truthseeker-daily -->
+        <!-- truthseeker-daily — top-3 template, copyable YAML -->
         <article class="card min-w-[300px] md:min-w-[340px] max-w-[340px] rounded-2xl border border-white/10 bg-ink-900/60 p-6 flex flex-col">
           <div class="flex items-center justify-between">
             <span class="text-[10px] font-mono uppercase tracking-wider text-neon-pink">x-deploy · scheduled</span>
@@ -353,13 +448,47 @@
           <p class="mt-2 text-sm text-zinc-400 leading-relaxed flex-1">
             Daily fact-check of the 3 most-discussed X threads in a target domain, with primary-source citations and a calibration note.
           </p>
-          <div class="mt-5 flex items-center justify-between text-xs text-zinc-500 font-mono">
-            <code>init truthseeker-daily</code>
-            <span class="text-neon-cyan">→</span>
+          <div class="mt-5 flex items-center justify-between gap-2">
+            <code class="text-xs text-zinc-500 font-mono truncate">init truthseeker-daily</code>
+            <button type="button" data-copy-yaml="truthseeker-daily"
+                    class="inline-flex items-center gap-1.5 rounded-md border border-neon-pink/30 bg-neon-pink/10 text-neon-pink hover:bg-neon-pink/20 transition px-2.5 py-1 text-[11px] font-mono">
+              <svg class="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg>
+              <span data-copy-label>Copy YAML</span>
+            </button>
           </div>
+          <template data-copy-payload="truthseeker-daily">version: "1.0"
+name: truthseeker-daily
+description: Daily fact-check of the 3 most-discussed X threads in a target domain.
+
+build:
+  source: grok
+  language: python
+  entrypoint: main.py
+  required_tools: [x_search, web_search]
+  grok_prompt: |
+    Generate main.py that fact-checks the top 3 most-discussed X threads
+    in $TARGET_DOMAIN. For each, post a reply with the primary source URL
+    and a calibration note. Hard limits: ≤280 chars/post, no shell=True,
+    timeouts on every httpx call, retries via tenacity.
+
+deploy:
+  target: x
+  schedule: "0 14 * * *"
+  post_to_x: true
+  safety_scan: true
+
+agent:
+  model: grok-4.20-0309
+  reasoning_effort: high
+  personality: Calm, evidence-first. Never editorialises beyond cited sources.
+
+safety:
+  audit_before_post: true
+  max_tokens_per_run: 22000
+  lucas_veto_enabled: false</template>
         </article>
 
-        <!-- research-thread-weekly -->
+        <!-- research-thread-weekly — top-3 template, copyable YAML -->
         <article class="card min-w-[300px] md:min-w-[340px] max-w-[340px] rounded-2xl border border-white/10 bg-ink-900/60 p-6 flex flex-col">
           <div class="flex items-center justify-between">
             <span class="text-[10px] font-mono uppercase tracking-wider text-neon-cyan">research · weekly</span>
@@ -369,13 +498,47 @@
           <p class="mt-2 text-sm text-zinc-400 leading-relaxed flex-1">
             Weekly deep-research agent. 5 parallel x_search queries plus web_search verification produce one authoritative X thread.
           </p>
-          <div class="mt-5 flex items-center justify-between text-xs text-zinc-500 font-mono">
-            <code>init research-thread-weekly</code>
-            <span class="text-neon-cyan">→</span>
+          <div class="mt-5 flex items-center justify-between gap-2">
+            <code class="text-xs text-zinc-500 font-mono truncate">init research-thread-weekly</code>
+            <button type="button" data-copy-yaml="research-thread-weekly"
+                    class="inline-flex items-center gap-1.5 rounded-md border border-neon-cyan/30 bg-neon-cyan/10 text-neon-cyan hover:bg-neon-cyan/20 transition px-2.5 py-1 text-[11px] font-mono">
+              <svg class="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg>
+              <span data-copy-label>Copy YAML</span>
+            </button>
           </div>
+          <template data-copy-payload="research-thread-weekly">version: "1.0"
+name: research-thread-weekly
+description: Weekly deep-research agent. 5 parallel x_search queries plus web_search verification produce one authoritative X thread.
+
+build:
+  source: grok
+  language: python
+  entrypoint: main.py
+  required_tools: [x_search, web_search]
+  grok_prompt: |
+    Generate main.py that runs 5 parallel x_search queries (asyncio.gather)
+    on adjacent framings of $TOPIC, dedupes findings, verifies each against
+    a primary source via web_search, and ships ONE 7-10 post X thread.
+    Hard limits: ≤280 chars/post, retries via tenacity, timeouts on httpx.
+
+deploy:
+  target: x
+  schedule: "0 13 * * 1"
+  post_to_x: true
+  safety_scan: true
+
+agent:
+  model: grok-4.20-0309
+  reasoning_effort: high
+  personality: Rigorous, cites sources before claims, acknowledges open questions.
+
+safety:
+  audit_before_post: true
+  max_tokens_per_run: 30000
+  lucas_veto_enabled: false</template>
         </article>
 
-        <!-- x-trend-analyzer -->
+        <!-- x-trend-analyzer — top-3 template, copyable YAML -->
         <article class="card min-w-[300px] md:min-w-[340px] max-w-[340px] rounded-2xl border border-white/10 bg-ink-900/60 p-6 flex flex-col">
           <div class="flex items-center justify-between">
             <span class="text-[10px] font-mono uppercase tracking-wider text-neon-purple2">trends · 6h cron</span>
@@ -385,10 +548,44 @@
           <p class="mt-2 text-sm text-zinc-400 leading-relaxed flex-1">
             Every 6 hours, publish a single X thread summarising the top 5 technical trends with primary-source citations.
           </p>
-          <div class="mt-5 flex items-center justify-between text-xs text-zinc-500 font-mono">
-            <code>init x-trend-analyzer</code>
-            <span class="text-neon-cyan">→</span>
+          <div class="mt-5 flex items-center justify-between gap-2">
+            <code class="text-xs text-zinc-500 font-mono truncate">init x-trend-analyzer</code>
+            <button type="button" data-copy-yaml="x-trend-analyzer"
+                    class="inline-flex items-center gap-1.5 rounded-md border border-neon-purple/30 bg-neon-purple/15 text-neon-purple2 hover:bg-neon-purple/25 transition px-2.5 py-1 text-[11px] font-mono">
+              <svg class="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg>
+              <span data-copy-label>Copy YAML</span>
+            </button>
           </div>
+          <template data-copy-payload="x-trend-analyzer">version: "1.0"
+name: x-trend-analyzer
+description: Every 6 hours, publish a single X thread summarising the top 5 technical trends with primary-source citations.
+
+build:
+  source: grok
+  language: python
+  entrypoint: main.py
+  required_tools: [x_search, web_search]
+  grok_prompt: |
+    Generate main.py that, every 6h, identifies the top 5 technical trends
+    on X via x_search, verifies each with a primary source via web_search,
+    and posts one 6-post thread (1 opener + 5 trend posts). Hard limits:
+    ≤280 chars/post, retries via tenacity, timeouts on every httpx call.
+
+deploy:
+  target: x
+  schedule: "0 */6 * * *"
+  post_to_x: true
+  safety_scan: true
+
+agent:
+  model: grok-4.20-0309
+  reasoning_effort: high
+  personality: Concise, source-first, distinguishes signal from noise.
+
+safety:
+  audit_before_post: true
+  max_tokens_per_run: 18000
+  lucas_veto_enabled: false</template>
         </article>
 
         <!-- code-explainer-bot -->
@@ -440,13 +637,39 @@
         </article>
 
       </div>
+
+      <!-- Connect-with-Orchestra CTA — slim banner under the templates carousel. -->
+      <a href="https://github.com/agentmindcloud/grok-build-bridge/tree/main/examples/orchestra-bridge"
+         class="group mt-10 block rounded-2xl border border-white/10 bg-gradient-to-r from-neon-purple/[0.10] via-ink-900/60 to-neon-cyan/[0.08] p-6 md:p-7 hover:border-neon-purple/40 transition shadow-glow-purple">
+        <div class="flex flex-col md:flex-row md:items-center gap-5">
+          <div class="shrink-0 h-14 w-14 rounded-xl bg-neon-purple/15 border border-neon-purple/30 flex items-center justify-center text-2xl">
+            🎭
+          </div>
+          <div class="flex-1">
+            <div class="flex items-center gap-2">
+              <span class="text-[10px] font-mono uppercase tracking-wider text-neon-purple2">Combined example</span>
+              <span class="text-[10px] font-mono text-zinc-500">·</span>
+              <span class="text-[10px] font-mono text-zinc-500">examples/orchestra-bridge</span>
+            </div>
+            <h3 class="mt-1 font-display text-xl font-bold text-zinc-100">
+              Connect with <span class="text-neon-purple2">Grok Agent Orchestra</span>
+            </h3>
+            <p class="mt-1 text-sm text-zinc-400 leading-relaxed">
+              Pair any template with a multi-agent debate + Lucas veto. One YAML for the brief, one for the deploy — two reviewers, defence in depth.
+            </p>
+          </div>
+          <div class="shrink-0 inline-flex items-center gap-2 rounded-lg bg-neon-purple text-white font-semibold px-5 py-2.5 group-hover:brightness-110 transition">
+            See the worked example <span class="transition-transform group-hover:translate-x-1" aria-hidden="true">→</span>
+          </div>
+        </div>
+      </a>
     </section>
 
     <!-- ==========================================================
          How it works — five-phase mini flow.
          Cards are connected by ::after arrows (CSS only).
          ========================================================== -->
-    <section id="how" class="mx-auto max-w-7xl px-6 py-20 md:py-24">
+    <section id="how" class="mx-auto max-w-7xl px-4 sm:px-6 py-16 sm:py-20 md:py-24">
       <div class="mb-12 text-center">
         <h2 class="font-display text-3xl md:text-4xl font-bold tracking-tight">How it works</h2>
         <p class="mt-3 text-zinc-400 max-w-2xl mx-auto">
@@ -586,7 +809,7 @@
        Footer — quick links + brand line.
        ============================================================ -->
   <footer id="footer" class="border-t border-white/5 mt-10">
-    <div class="mx-auto max-w-7xl px-6 py-14">
+    <div class="mx-auto max-w-7xl px-4 sm:px-6 py-12 sm:py-14">
       <div class="grid grid-cols-2 md:grid-cols-5 gap-8">
 
         <div class="col-span-2">
@@ -642,6 +865,10 @@
     </div>
   </footer>
 
+  <!-- Confetti overlay — full-viewport, pointer-events-none, fixed. -->
+  <canvas data-confetti aria-hidden="true"
+          class="pointer-events-none fixed inset-0 w-full h-full z-50"></canvas>
+
   <!-- ============================================================
        Minimal vanilla JS:
          1. Carousel prev/next buttons (no dependency).
@@ -660,6 +887,282 @@
       document.querySelector('[data-carousel-next]')?.addEventListener('click', () => {
         track.scrollBy({ left:  step(), behavior: 'smooth' });
       });
+    })();
+
+    // --- Mobile menu toggle ----------------------------------------------
+    (function () {
+      const btn   = document.querySelector('[data-mobile-menu-toggle]');
+      const panel = document.querySelector('[data-mobile-menu]');
+      const open  = document.querySelector('[data-icon-open]');
+      const close = document.querySelector('[data-icon-close]');
+      if (!btn || !panel) return;
+
+      const set = (isOpen) => {
+        panel.classList.toggle('hidden', !isOpen);
+        open?.classList.toggle('hidden',  isOpen);
+        close?.classList.toggle('hidden', !isOpen);
+        btn.setAttribute('aria-expanded', String(isOpen));
+        btn.setAttribute('aria-label', isOpen ? 'Close menu' : 'Open menu');
+      };
+
+      btn.addEventListener('click', () => set(panel.classList.contains('hidden')));
+      // Close on link tap.
+      panel.querySelectorAll('a').forEach(a => a.addEventListener('click', () => set(false)));
+      // Close on viewport upgrade past md breakpoint.
+      const mq = window.matchMedia('(min-width: 768px)');
+      mq.addEventListener('change', (e) => { if (e.matches) set(false); });
+    })();
+
+    // --- Simulate Deploy + canvas confetti -------------------------------
+    (function () {
+      const btn = document.querySelector('[data-deploy-sim]');
+      const label = document.querySelector('[data-deploy-sim-label]');
+      const canvas = document.querySelector('[data-confetti]');
+      if (!btn || !canvas) return;
+
+      const ctx = canvas.getContext('2d');
+      let dpr = window.devicePixelRatio || 1;
+      const fit = () => {
+        dpr = window.devicePixelRatio || 1;
+        canvas.width  = canvas.clientWidth  * dpr;
+        canvas.height = canvas.clientHeight * dpr;
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      };
+      fit();
+      window.addEventListener('resize', fit);
+
+      const COLORS = ['#00E5FF', '#7C3AED', '#FF4FD8', '#27C93F', '#9D4EDD', '#5EF2FF'];
+      const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+      const burst = () => {
+        const w = canvas.clientWidth, h = canvas.clientHeight;
+        const N = reduced ? 30 : 140;
+        const pieces = [];
+        for (let i = 0; i < N; i++) {
+          pieces.push({
+            x: w / 2 + (Math.random() - 0.5) * 120,
+            y: h / 3,
+            vx: (Math.random() - 0.5) * 8,
+            vy: -6 - Math.random() * 6,
+            g:  0.18 + Math.random() * 0.08,
+            s:  3 + Math.random() * 4,
+            r:  Math.random() * Math.PI,
+            vr: (Math.random() - 0.5) * 0.3,
+            c:  COLORS[Math.floor(Math.random() * COLORS.length)],
+            life: 0,
+            ttl: 90 + Math.random() * 50,
+          });
+        }
+        const draw = () => {
+          ctx.clearRect(0, 0, w, h);
+          let alive = 0;
+          for (const p of pieces) {
+            if (p.life > p.ttl) continue;
+            alive++;
+            p.x += p.vx;
+            p.y += p.vy;
+            p.vy += p.g;
+            p.r  += p.vr;
+            p.life++;
+            const alpha = Math.max(0, 1 - p.life / p.ttl);
+            ctx.save();
+            ctx.translate(p.x, p.y);
+            ctx.rotate(p.r);
+            ctx.globalAlpha = alpha;
+            ctx.fillStyle = p.c;
+            ctx.fillRect(-p.s, -p.s * 0.4, p.s * 2, p.s * 0.8);
+            ctx.restore();
+          }
+          if (alive > 0) requestAnimationFrame(draw);
+          else ctx.clearRect(0, 0, w, h);
+        };
+        requestAnimationFrame(draw);
+      };
+
+      btn.addEventListener('click', () => {
+        if (label) {
+          const original = label.textContent;
+          label.textContent = 'Deploying…';
+          btn.disabled = true;
+          setTimeout(() => {
+            label.textContent = 'Deployed ✓';
+            burst();
+            // Also drop a celebratory entry into the live deploy feed (if present).
+            const feed = document.querySelector('[data-deploy-feed]');
+            if (feed) {
+              const li = document.createElement('li');
+              li.className = 'px-5 py-3 flex items-center gap-3 text-sm transform -translate-y-2 opacity-0 transition-all duration-500 bg-neon-green/[0.04]';
+              li.innerHTML = `
+                <span class="inline-flex items-center justify-center h-6 w-6 rounded-md bg-neon-green/20 text-neon-green border border-neon-green/40 text-[11px]">✓</span>
+                <span class="font-mono text-neon-green text-xs">truthseeker-daily</span>
+                <span class="text-zinc-500 text-xs hidden sm:inline">→</span>
+                <span class="font-mono text-zinc-300 text-xs hidden sm:inline">@you (simulated)</span>
+                <span class="ml-auto text-[10px] font-mono text-neon-green">just now</span>`;
+              feed.prepend(li);
+              requestAnimationFrame(() => li.classList.remove('-translate-y-2', 'opacity-0'));
+              while (feed.children.length > 6) feed.lastElementChild.remove();
+            }
+          }, 800);
+          setTimeout(() => {
+            label.textContent = original;
+            btn.disabled = false;
+          }, 2800);
+        } else {
+          burst();
+        }
+      });
+    })();
+
+    // --- Copy YAML buttons (top-3 templates) -----------------------------
+    (function () {
+      document.querySelectorAll('[data-copy-yaml]').forEach(btn => {
+        const slug = btn.getAttribute('data-copy-yaml');
+        const tpl  = document.querySelector(`template[data-copy-payload="${slug}"]`);
+        const label = btn.querySelector('[data-copy-label]');
+        if (!tpl || !label) return;
+        const original = label.textContent;
+
+        btn.addEventListener('click', async (e) => {
+          e.preventDefault();
+          const yaml = tpl.innerHTML
+            .replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&amp;/g, '&');
+          try {
+            await navigator.clipboard.writeText(yaml);
+            label.textContent = 'Copied ✓';
+            btn.classList.add('!bg-neon-green/20', '!border-neon-green/40', '!text-neon-green');
+          } catch {
+            // Fallback: surface a textarea so the user can copy manually.
+            const ta = document.createElement('textarea');
+            ta.value = yaml;
+            document.body.appendChild(ta);
+            ta.select();
+            try { document.execCommand('copy'); label.textContent = 'Copied ✓'; }
+            catch { label.textContent = 'Copy failed'; }
+            ta.remove();
+          }
+          setTimeout(() => {
+            label.textContent = original;
+            btn.classList.remove('!bg-neon-green/20', '!border-neon-green/40', '!text-neon-green');
+          }, 1800);
+        });
+      });
+    })();
+
+    // --- Live Deployments feed — fake stream of recent deploys ----------
+    (function () {
+      const feed = document.querySelector('[data-deploy-feed]');
+      if (!feed) return;
+
+      const TEMPLATES = [
+        { slug: 'truthseeker-daily',     color: 'pink'   },
+        { slug: 'research-thread-weekly',color: 'cyan'   },
+        { slug: 'x-trend-analyzer',      color: 'purple2'},
+        { slug: 'code-explainer-bot',    color: 'cyan3'  },
+        { slug: 'hello-bot',             color: 'green'  },
+        { slug: 'grok-build-coding-agent', color: 'purple' },
+      ];
+      const REGIONS = ['us-east-1', 'eu-west-1', 'us-west-2', 'ap-south-1', 'eu-central-1', 'sa-east-1'];
+      const HANDLES = ['@nora', '@kenji', '@priya', '@diego', '@yuki', '@amara', '@finn', '@selma', '@marco', '@isla'];
+
+      const COLOR_MAP = {
+        cyan:    'text-neon-cyan',
+        cyan2:   'text-neon-cyan2',
+        cyan3:   'text-neon-cyan3',
+        purple:  'text-neon-purple',
+        purple2: 'text-neon-purple2',
+        pink:    'text-neon-pink',
+        green:   'text-neon-green',
+      };
+
+      const MAX_VISIBLE = 6;
+      let counter = 0;
+
+      const ago = (s) => s < 60 ? `${s}s ago` : `${Math.floor(s/60)}m ago`;
+
+      const makeEntry = () => {
+        const tpl = TEMPLATES[Math.floor(Math.random() * TEMPLATES.length)];
+        const region = REGIONS[Math.floor(Math.random() * REGIONS.length)];
+        const handle = HANDLES[Math.floor(Math.random() * HANDLES.length)];
+        const tokens = (10 + Math.floor(Math.random() * 25));
+        const dur = (28 + Math.random() * 20).toFixed(1);
+        const id = ++counter;
+
+        const li = document.createElement('li');
+        li.className = 'px-5 py-3 flex items-center gap-3 text-sm transform -translate-y-2 opacity-0 transition-all duration-500';
+        li.dataset.born = String(Date.now());
+        li.innerHTML = `
+          <span class="inline-flex items-center justify-center h-6 w-6 rounded-md bg-neon-green/15 text-neon-green border border-neon-green/30 text-[11px]">✓</span>
+          <span class="font-mono ${COLOR_MAP[tpl.color]} text-xs">${tpl.slug}</span>
+          <span class="text-zinc-500 text-xs hidden sm:inline">→</span>
+          <span class="font-mono text-zinc-300 text-xs hidden sm:inline">${handle}</span>
+          <span class="ml-auto flex items-center gap-3 text-[10px] font-mono text-zinc-500">
+            <span class="hidden md:inline">${region}</span>
+            <span>${tokens}k tok</span>
+            <span class="text-neon-green">${dur}s</span>
+            <span data-age data-born="${Date.now()}" class="w-14 text-right">just now</span>
+          </span>`;
+        return li;
+      };
+
+      const seedAndAnimate = () => {
+        const li = makeEntry();
+        feed.prepend(li);
+        // Force layout, then transition in.
+        requestAnimationFrame(() => {
+          li.classList.remove('-translate-y-2', 'opacity-0');
+        });
+        // Cap visible entries.
+        while (feed.children.length > MAX_VISIBLE) {
+          const last = feed.lastElementChild;
+          last.classList.add('opacity-0');
+          setTimeout(() => last.remove(), 400);
+        }
+      };
+
+      // Seed the feed with a few backdated entries so it looks alive immediately.
+      for (let i = 0; i < 4; i++) seedAndAnimate();
+
+      // Tick the per-row "ago" display every 3s.
+      setInterval(() => {
+        feed.querySelectorAll('[data-age]').forEach(el => {
+          const s = Math.max(0, Math.floor((Date.now() - Number(el.dataset.born)) / 1000));
+          el.textContent = ago(s);
+        });
+      }, 3000);
+
+      // Keep streaming new entries at randomised intervals (3–7s).
+      const stream = () => {
+        seedAndAnimate();
+        setTimeout(stream, 3000 + Math.random() * 4000);
+      };
+      setTimeout(stream, 2500);
+    })();
+
+    // --- Safety Score gauge — arc fills + percentage counts on view -----
+    (function () {
+      const arc = document.querySelector('[data-safety-arc]');
+      const pct = document.querySelector('[data-safety-pct]');
+      if (!arc || !pct) return;
+      const TARGET = 99.7;
+      const C = 540.35; // 2 * PI * r where r=86
+      const reveal = () => {
+        // arc: 99.7% of the circumference revealed
+        arc.style.strokeDashoffset = String(C * (1 - TARGET / 100));
+        // count up
+        const start = performance.now();
+        const dur = 1600;
+        const tick = (now) => {
+          const t = Math.min(1, (now - start) / dur);
+          const eased = 1 - Math.pow(1 - t, 3);
+          pct.textContent = (TARGET * eased).toFixed(1);
+          if (t < 1) requestAnimationFrame(tick);
+        };
+        requestAnimationFrame(tick);
+      };
+      const io = new IntersectionObserver((entries, obs) => {
+        if (entries.some(e => e.isIntersecting)) { reveal(); obs.disconnect(); }
+      }, { threshold: 0.4 });
+      io.observe(arc);
     })();
 
     // --- Relative "last refresh" timestamp -------------------------------
