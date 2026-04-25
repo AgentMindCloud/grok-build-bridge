@@ -5,15 +5,15 @@ build-backend = "hatchling.build"
 [project]
 name = "grok-build-bridge"
 version = "0.1.0"
-description = "Turn any Grok-generated codebase into a safely deployed X agent via one YAML file."
+description = "Production-ready X agents from Grok 4.20 — two-layer safety audit (static + LLM), xai-sdk integration, multi-target deploy (X / Vercel / Render / local), scheduling, dry-run, templates, VS Code IntelliSense, Orchestra-ready."
 readme = "README.md"
 license = { file = "LICENSE" }
 requires-python = ">=3.10"
 authors = [{ name = "Jan Solo", email = "jan@agentmind.cloud" }]
 maintainers = [{ name = "AgentMindCloud" }]
-keywords = ["grok", "xai", "x", "twitter", "agent", "bridge", "deployment"]
+keywords = ["grok", "xai", "x", "twitter", "agent", "bridge", "deployment", "safety", "yaml", "x-twitter", "automation", "llm", "multi-agent"]
 classifiers = [
-    "Development Status :: 3 - Alpha",
+    "Development Status :: 4 - Beta",
     "Intended Audience :: Developers",
     "License :: OSI Approved :: Apache Software License",
     "Operating System :: OS Independent",
@@ -21,7 +21,9 @@ classifiers = [
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
     "Topic :: Software Development :: Build Tools",
+    "Topic :: Software Development :: Libraries :: Python Modules",
 ]
 dependencies = [
     "xai-sdk>=1.0",
