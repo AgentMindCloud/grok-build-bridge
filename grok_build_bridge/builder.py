@@ -292,16 +292,32 @@ def _run_grok_build_cli_source(
     client: XAIClient,
     gen_dir: Path,
     entrypoint: str,
+    allow_stub: bool = False,
 ) -> tuple[str, str]:
-    """Shell out to the grok-build CLI if present, else fall back to grok."""
+    """Shell out to the grok-build CLI if present.
+
+    When the binary is missing, the historical behaviour was to silently
+    fall back to direct Grok generation. That hides a contract change
+    from the user — the bridge.yaml asked for ``grok-build-cli`` and got
+    something else. We now require an explicit ``allow_stub=True`` opt-in
+    before we substitute, otherwise we hard-error with a fix-it tip.
+    """
     prompt = config["build"].get("grok_prompt") or ""
     (gen_dir / _PROMPT_FILE).write_text(prompt, encoding="utf-8")
 
     binary = shutil.which("grok-build")
     if binary is None:
+        if not allow_stub:
+            raise BuilderError(
+                "build.source is 'grok-build-cli' but the grok-build binary is not on PATH",
+                suggestion=(
+                    "Install grok-build (npm i -g grok-build-cli) and retry, "
+                    "or pass --allow-stub to fall back to direct Grok generation."
+                ),
+            )
         warn(
-            "grok-build CLI not found on PATH — falling back to direct Grok "
-            "generation for this run."
+            "grok-build CLI not found on PATH — --allow-stub set, falling back "
+            "to direct Grok generation for this run."
         )
         return _run_grok_source(
             config=config, client=client, gen_dir=gen_dir, entrypoint=entrypoint
@@ -344,6 +360,7 @@ def generate_code(
     *,
     yaml_dir: Path | None = None,
     base_dir: Path | None = None,
+    allow_stub: bool = False,
 ) -> Path:
     """Generate (or locate) the agent codebase for ``config``.
 
@@ -357,6 +374,10 @@ def generate_code(
             the ``local`` mode to locate sibling code.
         base_dir: Override for the project root. Defaults to ``cwd``; the
             generated tree lives at ``<base_dir>/generated/<name>/``.
+        allow_stub: When ``build.source`` is ``grok-build-cli`` and the
+            ``grok-build`` binary is missing, fall back to direct Grok
+            generation. Off by default — silently switching the
+            implementation contract is a launch risk.
 
     Returns:
         Path to the generated agent directory (``generated/<name>/``).
@@ -399,7 +420,11 @@ def generate_code(
                 suggestion="Pass a client or set build.source to 'local'.",
             )
         written_code, model_used = _run_grok_build_cli_source(
-            config=config, client=client, gen_dir=gen_dir, entrypoint=entrypoint
+            config=config,
+            client=client,
+            gen_dir=gen_dir,
+            entrypoint=entrypoint,
+            allow_stub=allow_stub,
         )
     else:
         raise BuilderError(f"unknown build.source {source!r}")

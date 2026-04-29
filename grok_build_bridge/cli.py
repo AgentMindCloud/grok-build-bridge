@@ -1,12 +1,13 @@
 """Typer + Rich command-line interface for ``grok-build-bridge``.
 
-Six user-facing commands:
+Seven user-facing commands:
 
 * ``run``       — build, safety-scan, and deploy from one YAML.
 * ``validate``  — parser-only pretty-print of the resolved config.
 * ``templates`` — list bundled templates with description and required env.
 * ``init``      — copy a bundled template to the user's working directory.
 * ``publish``   — package a built agent for the future grokagents.dev marketplace.
+* ``doctor``    — probe the local environment for everything Bridge needs.
 * ``version``   — show grok-build-bridge / xai-sdk / python versions.
 
 Every failure path renders a red Rich panel with a "What to try next"
@@ -186,6 +187,15 @@ def run_cmd(
         "--force",
         help="Proceed even if the safety scan reports issues.",
     ),
+    allow_stub: bool = typer.Option(
+        False,
+        "--allow-stub",
+        help=(
+            "Permit fallback stubs when an optional dependency is missing: "
+            "direct Grok generation for `grok-build-cli` sources, and the "
+            "local payload writer for `deploy.target: x`. Off by default."
+        ),
+    ),
     verbose: bool = typer.Option(
         False,
         "--verbose",
@@ -198,7 +208,7 @@ def run_cmd(
     try:
         from grok_build_bridge.runtime import run_bridge
 
-        result = run_bridge(config, dry_run=dry_run, force=force)
+        result = run_bridge(config, dry_run=dry_run, force=force, allow_stub=allow_stub)
     except (BridgeConfigError, BridgeRuntimeError) as exc:
         _handle_and_exit(exc, verbose=verbose)
     if not result.success:
@@ -532,6 +542,200 @@ def publish_cmd(
             "[brand.muted]grokagents.dev upload endpoint is not live yet. "
             "Keep the zip; `--upload` lands in v0.3.0.[/]"
         )
+
+
+# ---------------------------------------------------------------------------
+# `doctor` command
+# ---------------------------------------------------------------------------
+
+
+# Severity glyphs reused by the doctor table. Kept module-level so tests can
+# substring-match on them without copying the strings.
+_DOCTOR_OK: Final[str] = "✓ ok"
+_DOCTOR_WARN: Final[str] = "⚠ warn"
+_DOCTOR_FAIL: Final[str] = "✗ missing"
+
+
+@app.command("doctor")
+def doctor_cmd(
+    verbose: bool = typer.Option(
+        False, "--verbose", "-v", help="Print full tracebacks on probe failure."
+    ),
+) -> None:
+    """🩺  Probe the local environment for everything Bridge expects.
+
+    Returns 0 if the required surface (Python, ``xai-sdk``, ``XAI_API_KEY``)
+    is healthy and 3 if anything required is missing. Optional surfaces
+    (deploy CLIs, ``grok_install``) only contribute warnings.
+    """
+    rows = list(_collect_doctor_rows())
+    table = Table(title="[brand.primary]🩺  Bridge environment[/]", border_style="brand.secondary")
+    table.add_column("check", style="brand.primary", no_wrap=True)
+    table.add_column("status", no_wrap=True)
+    table.add_column("detail", style="brand.muted")
+    for row in rows:
+        table.add_row(row.label, _format_status(row.status), row.detail)
+    console.print(table)
+
+    failures = [r for r in rows if r.status == "fail"]
+    warnings = [r for r in rows if r.status == "warn"]
+
+    if failures:
+        body = Text()
+        body.append(f"{len(failures)} required check(s) failed.\n\n", style="brand.error")
+        for row in failures:
+            body.append("  • ", style="brand.muted")
+            body.append(row.label, style="brand.primary")
+            body.append(f" — {row.fix}\n")
+        console.print(
+            Panel(body, title="[brand.error]🚫 doctor failed[/]", border_style="brand.error")
+        )
+        if verbose:
+            console.print_exception(show_locals=False)
+        raise typer.Exit(code=_EXIT_RUNTIME)
+
+    title = "🩺 doctor — all required checks pass"
+    body = Text()
+    body.append(f"{len(rows) - len(warnings)} ok", style="brand.success")
+    if warnings:
+        body.append(f"  ·  {len(warnings)} warning(s) (optional features)\n", style="brand.warn")
+        for row in warnings:
+            body.append("  • ", style="brand.muted")
+            body.append(row.label, style="brand.warn")
+            body.append(f" — {row.fix}\n")
+    else:
+        body.append("  ·  no warnings\n", style="brand.muted")
+    console.print(Panel(body, title=f"[brand.success]{title}[/]", border_style="brand.success"))
+
+
+# Shape of one doctor probe result. ``status`` ∈ {"ok", "warn", "fail"};
+# ``fix`` is a one-liner the panel renderer prints when a check fails or
+# warns. Plain dataclass-shaped namedtuple to avoid pulling dataclasses into
+# this module just for one row type.
+class _DoctorRow:  # noqa: D101 — internal struct, name documents purpose
+    __slots__ = ("label", "status", "detail", "fix")
+
+    def __init__(self, label: str, status: str, detail: str, fix: str = "") -> None:
+        self.label = label
+        self.status = status
+        self.detail = detail
+        self.fix = fix
+
+
+def _format_status(status: str) -> str:
+    """Map a status code to a brand-coloured Rich markup string."""
+    if status == "ok":
+        return f"[brand.success]{_DOCTOR_OK}[/]"
+    if status == "warn":
+        return f"[brand.warn]{_DOCTOR_WARN}[/]"
+    return f"[brand.error]{_DOCTOR_FAIL}[/]"
+
+
+def _collect_doctor_rows() -> Iterable[_DoctorRow]:
+    """Yield doctor rows in display order. Each yields exactly once."""
+    yield _probe_python()
+    yield _probe_xai_sdk()
+    yield _probe_xai_key()
+    yield _probe_x_token()
+    yield _probe_grok_install()
+    yield _probe_grok_install_home()
+    yield _probe_cli("vercel", "for `deploy.target: vercel`")
+    yield _probe_cli("railway", "for `deploy.target: railway`")
+    yield _probe_cli("flyctl", "for `deploy.target: flyio` (or `fly` symlink)", alt="fly")
+    yield _probe_cli("grok-build", "for `build.source: grok-build-cli`")
+
+
+def _probe_python() -> _DoctorRow:
+    version = sys.version.split()[0]
+    major, minor = sys.version_info[:2]
+    if (major, minor) >= (3, 10):
+        return _DoctorRow("python", "ok", version)
+    return _DoctorRow(
+        "python",
+        "fail",
+        version,
+        fix="upgrade to Python ≥ 3.10 (Bridge targets 3.10/3.11/3.12).",
+    )
+
+
+def _probe_xai_sdk() -> _DoctorRow:
+    try:
+        import xai_sdk  # noqa: WPS433
+    except ImportError:  # pragma: no cover — pyproject pins the dep
+        return _DoctorRow(
+            "xai-sdk",
+            "fail",
+            "not installed",
+            fix="pip install xai-sdk (or reinstall grok-build-bridge).",
+        )
+    version = getattr(xai_sdk, "__version__", "unknown")
+    return _DoctorRow("xai-sdk", "ok", str(version))
+
+
+def _probe_xai_key() -> _DoctorRow:
+    if os.environ.get("XAI_API_KEY"):
+        return _DoctorRow("XAI_API_KEY", "ok", "set")
+    return _DoctorRow(
+        "XAI_API_KEY",
+        "fail",
+        "unset",
+        fix="export XAI_API_KEY=sk-... (get one at https://console.x.ai).",
+    )
+
+
+def _probe_x_token() -> _DoctorRow:
+    if os.environ.get("X_BEARER_TOKEN"):
+        return _DoctorRow("X_BEARER_TOKEN", "ok", "set")
+    return _DoctorRow(
+        "X_BEARER_TOKEN",
+        "warn",
+        "unset",
+        fix="optional — only needed for `deploy.target: x`.",
+    )
+
+
+def _probe_grok_install() -> _DoctorRow:
+    try:
+        import grok_install.runtime  # noqa: F401, WPS433
+    except ImportError:
+        return _DoctorRow(
+            "grok_install (python package)",
+            "warn",
+            "not importable",
+            fix="optional — `pip install grok-install` to enable real `deploy.target: x`.",
+        )
+    return _DoctorRow("grok_install (python package)", "ok", "importable")
+
+
+def _probe_grok_install_home() -> _DoctorRow:
+    home = os.environ.get("GROK_INSTALL_HOME")
+    if not home:
+        return _DoctorRow(
+            "GROK_INSTALL_HOME",
+            "warn",
+            "unset",
+            fix="optional — point at a local checkout of grok-install-ecosystem.",
+        )
+    if Path(home).is_dir():
+        return _DoctorRow("GROK_INSTALL_HOME", "ok", home)
+    return _DoctorRow(
+        "GROK_INSTALL_HOME",
+        "warn",
+        f"set but not a directory: {home}",
+        fix="point GROK_INSTALL_HOME at an existing directory or unset it.",
+    )
+
+
+def _probe_cli(name: str, purpose: str, *, alt: str | None = None) -> _DoctorRow:
+    binary = shutil.which(name) or (shutil.which(alt) if alt else None)
+    if binary:
+        return _DoctorRow(name, "ok", binary)
+    return _DoctorRow(
+        name,
+        "warn",
+        "not on PATH",
+        fix=f"optional — install only if you need it ({purpose}).",
+    )
 
 
 # ---------------------------------------------------------------------------

@@ -62,13 +62,16 @@ def _dry_run_stub(payload: dict[str, Any]) -> dict[str, Any]:
 
 
 deploy_to_x: DeployFn
+_GROK_INSTALL_AVAILABLE: bool
 try:
     from grok_install.runtime import deploy_to_x as _deploy_to_x
 
     deploy_to_x = _deploy_to_x
+    _GROK_INSTALL_AVAILABLE = True
     logger.info("deploy path: grok_install.runtime.deploy_to_x")
 except ImportError:
     deploy_to_x = _dry_run_stub
+    _GROK_INSTALL_AVAILABLE = False
     logger.info("deploy path: local dry-run stub (grok_install not installed)")
 
 
@@ -135,7 +138,22 @@ def _deploy_x(
     config: dict[str, Any],
     *,
     client: XAIClient | None,
+    allow_stub: bool = False,
 ) -> str:
+    # Hard-fail before the audit when the real deploy path is unavailable
+    # and the caller has not explicitly opted into the dry-run payload —
+    # silently writing ``generated/deploy_payload.json`` and printing
+    # "Bridge complete" would leave users believing they shipped to X.
+    if not _GROK_INSTALL_AVAILABLE and not allow_stub:
+        raise BridgeRuntimeError(
+            "deploy.target is 'x' but grok_install is not installed",
+            suggestion=(
+                "pip install grok-install to enable the real deploy, "
+                "or pass --allow-stub to write the payload to "
+                f"{_DRY_RUN_PAYLOAD_PATH} for inspection."
+            ),
+        )
+
     _run_x_audit(config, client=client)
     manifest = _read_manifest(generated_dir)
     payload: dict[str, Any] = {
@@ -388,6 +406,7 @@ def deploy_to_target(
     config: dict[str, Any],
     *,
     client: XAIClient | None = None,
+    allow_stub: bool = False,
 ) -> str:
     """🎤 Deploy the agent at ``generated_dir`` to its configured target.
 
@@ -397,6 +416,10 @@ def deploy_to_target(
             the :class:`MappingProxyType` before passing it in).
         client: Optional :class:`XAIClient` used for the pre-deploy X-post
             audit. Tests pass a fake; CLI runs a fresh client.
+        allow_stub: When True and ``deploy.target`` is ``x``, fall back to
+            the local dry-run stub if ``grok_install`` is not importable.
+            False by default so a missing dependency cannot silently
+            "succeed" by writing ``generated/deploy_payload.json``.
 
     Returns:
         A URL or path string identifying the deploy target.
@@ -410,7 +433,7 @@ def deploy_to_target(
     target = deploy_cfg.get("target", "x")
 
     if target == "x":
-        return _deploy_x(generated_dir, config, client=client)
+        return _deploy_x(generated_dir, config, client=client, allow_stub=allow_stub)
     if target == "vercel":
         return _deploy_vercel(generated_dir, config)
     if target == "render":

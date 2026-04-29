@@ -84,7 +84,10 @@ def test_dry_run_every_bundled_template(
     yaml_path = _install_template(entry, tmp_bridge_workspace)
     _ensure_local_entrypoint(yaml_path, tmp_bridge_workspace)
 
-    result = run_bridge(yaml_path, dry_run=True, client=mock_xai_client)
+    # ``allow_stub=True`` lets the smoke test cover templates whose
+    # ``build.source`` is ``grok-build-cli``: without the real grok-build
+    # binary we want the historical fallback to direct Grok generation.
+    result = run_bridge(yaml_path, dry_run=True, allow_stub=True, client=mock_xai_client)
 
     assert isinstance(result, BridgeResult)
     assert result.success is True
@@ -99,6 +102,28 @@ def test_dry_run_every_bundled_template(
     )
     # Dry run → no deploy_url was recorded.
     assert result.deploy_url is None
+
+
+def test_grok_build_cli_source_hard_errors_without_allow_stub(
+    tmp_bridge_workspace: BridgeWorkspace,
+    mock_xai_client: MockXAIClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Without ``allow_stub`` a missing grok-build binary must NOT silently fall back."""
+    from grok_build_bridge.runtime import BridgePhaseError
+
+    # Force grok-build off PATH for the duration of this test.
+    monkeypatch.setattr("grok_build_bridge.builder.shutil.which", lambda _: None)
+
+    # Install the bundled grok-build-cli template.
+    entries = [e for e in _index_entries() if e["slug"] == "grok-build-coding-agent"]
+    assert entries, "expected a grok-build-coding-agent template in INDEX.yaml"
+    yaml_path = _install_template(entries[0], tmp_bridge_workspace)
+
+    with pytest.raises(BridgePhaseError) as info:
+        run_bridge(yaml_path, dry_run=True, client=mock_xai_client)
+    assert info.value.phase == "build"
+    assert "grok-build" in str(info.value)
 
 
 def test_dry_run_non_dry_deploy_fills_url(

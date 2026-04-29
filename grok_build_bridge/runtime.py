@@ -153,6 +153,7 @@ def run_bridge(
     *,
     dry_run: bool = False,
     force: bool = False,
+    allow_stub: bool = False,
     client: XAIClient | None = None,
 ) -> BridgeResult:
     """Drive a YAML config through all five bridge phases.
@@ -161,6 +162,12 @@ def run_bridge(
         yaml_path: Path to the bridge YAML.
         dry_run: When True, phases 1-3 run normally but phase 4 is skipped.
         force: When True, a failing safety report does not abort phase 4.
+        allow_stub: When True, the build and deploy paths may fall back to
+            their stub implementations when their respective optional
+            dependencies are not present (direct Grok for
+            ``grok-build-cli`` sources; the local payload writer for
+            ``deploy.target: x``). Off by default — silent fallbacks make
+            a missing dependency look like a successful deploy.
         client: Optional injected :class:`XAIClient` — tests pass a fake.
 
     Returns:
@@ -199,6 +206,7 @@ def run_bridge(
                 config,
                 resolved_client,
                 yaml_dir=yaml_path.parent,
+                allow_stub=allow_stub,
             )
         except BridgeRuntimeError as exc:
             raise BridgePhaseError("build", exc) from exc
@@ -255,7 +263,12 @@ def run_bridge(
     else:
         with phase_progress("🚀  deploying") as (prog, task):
             try:
-                deploy_url = deploy_to_target(generated_path, config, client=resolved_client)
+                deploy_url = deploy_to_target(
+                    generated_path,
+                    config,
+                    client=resolved_client,
+                    allow_stub=allow_stub,
+                )
             except BridgeRuntimeError as exc:
                 raise BridgePhaseError("deploy", exc) from exc
             prog.update(task, tokens=0)
