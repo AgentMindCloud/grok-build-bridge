@@ -120,6 +120,10 @@ def test_run_help_shows_branded_help() -> None:
     assert "grok-build-bridge" in out.lower() or "build" in out.lower()
     assert "--dry-run" in out
     assert "--force" in out
+    # ``--allow-stub`` lets the user opt into the historical fallback paths
+    # (deploy.py:_dry_run_stub and the grok-build-cli substitute) — present
+    # in the help output so users know how to recover when deps are absent.
+    assert "--allow-stub" in out
 
 
 # ---------------------------------------------------------------------------
@@ -261,3 +265,45 @@ def test_safety_error_exit_code(tmp_path: Path) -> None:
     out = _combined_output(result)
     assert result.exit_code == 4, out
     assert "Safety Error" in out
+
+
+# ---------------------------------------------------------------------------
+# doctor
+# ---------------------------------------------------------------------------
+
+
+def test_doctor_passes_with_xai_key(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("XAI_API_KEY", "sk-test")
+    result = runner.invoke(app, ["doctor"])
+    out = _combined_output(result)
+    assert result.exit_code == 0, out
+    # The required-surface rows must all be present.
+    assert "python" in out
+    assert "xai-sdk" in out
+    assert "XAI_API_KEY" in out
+    assert "all required checks pass" in out
+
+
+def test_doctor_fails_without_xai_key(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.delenv("XAI_API_KEY", raising=False)
+    result = runner.invoke(app, ["doctor"])
+    out = _combined_output(result)
+    # Required check failed → exit 3 (runtime).
+    assert result.exit_code == 3, out
+    assert "XAI_API_KEY" in out
+    assert "doctor failed" in out
+
+
+def test_doctor_warns_on_optional_cli(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Missing optional deploy CLIs should be warnings, not failures."""
+    monkeypatch.setenv("XAI_API_KEY", "sk-test")
+    # Force PATH to a single empty dir so no CLIs are findable.
+    empty_dir = Path("/tmp") / "doctor-empty-path"
+    empty_dir.mkdir(exist_ok=True)
+    monkeypatch.setenv("PATH", str(empty_dir))
+    result = runner.invoke(app, ["doctor"])
+    out = _combined_output(result)
+    assert result.exit_code == 0, out
+    # Each optional CLI row should show the warn glyph somewhere in the table.
+    for cli in ("vercel", "railway", "flyctl", "grok-build"):
+        assert cli in out

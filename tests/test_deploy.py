@@ -376,14 +376,15 @@ def test_deploy_to_target_unknown_raises(tmp_path: Path) -> None:
         deploy_to_target(tmp_path, cfg)
 
 
-def test_deploy_to_target_x_uses_stub_when_no_grok_install(
+def test_deploy_to_target_x_invokes_deploy_to_x_when_available(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, mock_xai_client: MockXAIClient
 ) -> None:
     cfg = _base_config()
     cfg["deploy"] = {"target": "x"}
     cfg["safety"] = {"audit_before_post": False}
 
-    # Force the stub deploy_to_x path regardless of whether grok_install is importable.
+    # Pretend grok_install is importable so the real-deploy path is taken.
+    monkeypatch.setattr(deploy_mod, "_GROK_INSTALL_AVAILABLE", True)
     called: list[dict[str, Any]] = []
 
     def _fake_deploy(payload: dict[str, Any]) -> dict[str, Any]:
@@ -402,10 +403,39 @@ def test_deploy_to_target_x_normalises_non_dict_result(
     cfg = _base_config()
     cfg["deploy"] = {"target": "x"}
     cfg["safety"] = {"audit_before_post": False}
+    monkeypatch.setattr(deploy_mod, "_GROK_INSTALL_AVAILABLE", True)
     monkeypatch.setattr(deploy_mod, "deploy_to_x", lambda payload: None)
     url = deploy_to_target(tmp_path, cfg, client=mock_xai_client)
-    # When the stub returns None, fall back to an x:// URL built from the name.
+    # When the deploy hook returns None, fall back to an x:// URL built from the name.
     assert url.startswith("x://")
+
+
+def test_deploy_to_target_x_hard_errors_when_grok_install_missing(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, mock_xai_client: MockXAIClient
+) -> None:
+    """Without --allow-stub, a missing grok_install must NOT silently dry-run."""
+    cfg = _base_config()
+    cfg["deploy"] = {"target": "x"}
+    cfg["safety"] = {"audit_before_post": False}
+    monkeypatch.setattr(deploy_mod, "_GROK_INSTALL_AVAILABLE", False)
+    with pytest.raises(BridgeRuntimeError, match="grok_install is not installed"):
+        deploy_to_target(tmp_path, cfg, client=mock_xai_client)
+
+
+def test_deploy_to_target_x_falls_back_to_stub_with_allow_stub(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, mock_xai_client: MockXAIClient
+) -> None:
+    """``allow_stub=True`` opts back into the historical dry-run payload behaviour."""
+    cfg = _base_config()
+    cfg["deploy"] = {"target": "x"}
+    cfg["safety"] = {"audit_before_post": False}
+    monkeypatch.setattr(deploy_mod, "_GROK_INSTALL_AVAILABLE", False)
+    monkeypatch.setattr(deploy_mod, "deploy_to_x", _dry_run_stub)
+    monkeypatch.chdir(tmp_path)
+    url = deploy_to_target(tmp_path, cfg, client=mock_xai_client, allow_stub=True)
+    # The stub writes a payload file and returns a path under ``generated/``.
+    assert "deploy_payload.json" in url
+    assert (tmp_path / "generated" / "deploy_payload.json").is_file()
 
 
 def test_deploy_to_target_vercel_without_binary(
