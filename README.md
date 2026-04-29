@@ -25,7 +25,7 @@
 </p>
 
 <p align="center">
-  <img src="https://readme-typing-svg.demolab.com?font=Space+Grotesk&weight=700&size=22&pause=1000&color=00E5FF&center=true&vCenter=true&width=900&lines=Grok+4.20+Generates+the+Agent+from+YAML;Two-Layer+Safety+%E2%80%94+Static+%2B+Grok+Audit;Deploy+to+X+%C2%B7+Vercel+%C2%B7+Render+%C2%B7+Local;Lucas+Veto+Hook+%E2%80%94+Orchestra+Ready" alt="typing" />
+  <img src="https://readme-typing-svg.demolab.com?font=Space+Grotesk&weight=700&size=22&pause=1000&color=00E5FF&center=true&vCenter=true&width=900&lines=Grok+4.20+Generates+the+Agent+from+YAML;Two-Layer+Safety+%E2%80%94+Static+%2B+Grok+Audit;Deploy+to+X+%C2%B7+Vercel+%C2%B7+Render+%C2%B7+Railway+%C2%B7+Fly.io+%C2%B7+Local;Lucas+Veto+Hook+%E2%80%94+Orchestra+Ready" alt="typing" />
 </p>
 
 <p align="center">
@@ -192,7 +192,7 @@ flowchart LR
     </td>
     <td>
       <h3>🚀 Phase 4 · Deploy</h3>
-      <p>Dispatches on <code>deploy.target</code>: <code>x</code> · <code>vercel</code> · <code>render</code> · <code>local</code>. X-bound posts get a pre-flight <code>audit_x_post</code>.</p>
+      <p>Dispatches on <code>deploy.target</code>: <code>x</code> · <code>vercel</code> · <code>render</code> · <code>railway</code> · <code>flyio</code> · <code>local</code>. X-bound posts get a pre-flight <code>audit_x_post</code>.</p>
     </td>
   </tr>
   <tr>
@@ -220,7 +220,7 @@ flowchart LR
     A["📄 Phase 1 · Parse<br/>schema validate · defaults · freeze"]:::parse --> B
     B["🎯 Phase 2 · Generate<br/>grok-4.20-0309 via xai-sdk<br/>writes bridge.manifest.json"]:::gen --> C
     C{"🛡️ Phase 3 · Safety<br/>static regex + Grok LLM audit"}:::safety
-    C -->|"safe ✓"| D["🚀 Phase 4 · Deploy<br/>x · vercel · render · local"]:::deploy
+    C -->|"safe ✓"| D["🚀 Phase 4 · Deploy<br/>x · vercel · render · railway · flyio · local"]:::deploy
     C -->|"unsafe ✗"| BLK["🚫 Block<br/>exit code 4"]:::block
     D --> E([✅ Phase 5 · BridgeResult<br/>path · verdict · URL · cost · duration]):::result
     BLK -. "--force override" .-> D
@@ -235,7 +235,7 @@ The full pipeline executes in **~40 seconds** for a typical agent. Every edge ab
 | ⏱️ **Time to first deploy** | Days — write the code, hand-roll deploy scripts, debug X auth, wire cron. | Minutes — `grok-build-bridge run bridge.yaml`. |
 | 📄 **Configuration** | Many files: source, deploy script, cron, secrets, retry glue. | One YAML, schema-validated, defaults filled, frozen at parse time. |
 | 🛡️ **Safety review** | Manual code reading, or skipped under deadline pressure. | Two-layer audit (static regex + Grok LLM) on every run. **Fails closed.** |
-| 🚀 **Multi-target deploy** | Rewrite glue per host (X / Vercel / Render / local). | One `deploy.target` switch. Same agent, four destinations. |
+| 🚀 **Multi-target deploy** | Rewrite glue per host (X / Vercel / Render / Railway / Fly.io / local). | One `deploy.target` switch. Same agent, six destinations. |
 | 💰 **Cost ceiling** | Unbounded — a runaway loop drains the xAI budget overnight. | `safety.max_tokens_per_run` caps every run; bridge aborts before overspend. |
 | 🔁 **Iteration loop** | Slow — full deploy required to test changes. | `--dry-run` exercises parse → generate → safety without touching prod. |
 | ✅ **Reproducibility** | "Works on my laptop" — model + prompt drift between runs. | `bridge.manifest.json` pins model · prompt SHA-256 · token estimate · file list. |
@@ -248,21 +248,22 @@ Bottom line: **what used to take a week of glue code, manual safety review, and 
 
 - 🛡️ **Safety is a build-time gate, not a post-mortem.** Two independent audits — static regex/AST and a Grok-in-the-loop LLM review — fire on every run and **fail closed**. Bad code never reaches X.
 - 🎭 **Orchestra-native by design.** `safety.lucas_veto_enabled: true` is the only line you need to wire a multi-agent Lucas veto into the deploy gate. The verdict from an Orchestra debate sits *in front of* the Bridge audit — two reviewers, two failure modes, one durable contract.
-- 🚀 **One YAML, four destinations.** The same spec ships to `x`, `vercel`, `render`, or `local` with a single `deploy.target` switch. No per-host glue, no rewrites when you migrate.
+- 🚀 **One YAML, six destinations.** The same spec ships to `x`, `vercel`, `render`, `railway`, `flyio`, or `local` with a single `deploy.target` switch. No per-host glue, no rewrites when you migrate.
 - 📐 **Reproducible by construction.** Every build emits a `bridge.manifest.json` pinning model · prompt SHA-256 · token estimate · file list. Audits are traceable; releases are bit-for-bit comparable; rollbacks are trivial.
 - 🤝 **xAI-aligned, not bolted-on.** Built directly on the official `xai-sdk` against `grok-4.20-0309`. No screen-scraping, no reverse-engineered endpoints, no surprise breakage on the next model release.
 
 ## ✦ CLI
 
-Six commands. Every failure path prints a branded Rich panel with a "What to try next" list and exits with a typed code so scripts can react.
+Seven commands. Every failure path prints a branded Rich panel with a "What to try next" list and exits with a typed code so scripts can react.
 
 | Command | What it does |
 | --- | --- |
-| `grok-build-bridge run <file.yaml>` | Full pipeline. Flags: `--dry-run`, `--force` (bypass safety block), `--verbose/-v`. |
+| `grok-build-bridge run <file.yaml>` | Full pipeline. Flags: `--dry-run`, `--force` (bypass safety block), `--allow-stub` (permit fallback stubs when an optional dep is missing), `--verbose/-v`. |
 | `grok-build-bridge validate <file.yaml>` | Parse, schema-validate, apply defaults, and pretty-print the resolved config — no network. |
 | `grok-build-bridge templates` | List bundled templates with description, required env, estimated tokens, categories. |
 | `grok-build-bridge init <slug>` | Copy a bundled template to `--out/-o` (default: cwd). `--force` skips the overwrite prompt. |
 | `grok-build-bridge publish <file.yaml>` | 📦 Package + manifest for the future [grokagents.dev](https://grokagents.dev) marketplace. Flags: `--version`, `--out/-o`, `--include-build`, `--dry-run`, `--author`, `--author-email`, `--license`, `--homepage`, `--repository`. |
+| `grok-build-bridge doctor` | 🩺 Probe the local environment — Python, `xai-sdk`, env vars, optional deploy CLIs, `grok_install`. Exits 3 if anything required is missing. |
 | `grok-build-bridge version` | Print grok-build-bridge / xai-sdk / python versions. |
 
 **Global flags:** `--version/-V` · `--no-color` (also honours `NO_COLOR`).
@@ -465,30 +466,30 @@ ruff check . && ruff format --check . && mypy grok_build_bridge && pytest
       <a href="https://github.com/AgentMindCloud/grok-agent-orchestra">Repository →</a>
     </td>
     <td width="33%">
-      <h3>📦 grok-install</h3>
-      <p>The universal YAML spec for declarative agents.</p>
+      <h3>📦 grok-install <em>(preview)</em></h3>
+      <p>Companion Python package exposing <code>grok_install.runtime.deploy_to_x</code>, which Bridge calls on <code>deploy.target: x</code>. PyPI release pending.</p>
       <a href="https://github.com/AgentMindCloud/grok-install">Repository →</a>
     </td>
     <td width="33%">
-      <h3>⚙️ grok-install-cli</h3>
-      <p>The CLI Bridge hands off to on <code>deploy.target: x</code>.</p>
+      <h3>⚙️ grok-install-cli <em>(preview)</em></h3>
+      <p>Standalone CLI wrapper around <code>grok-install</code>'s runtime. Useful when you want the deploy step outside a Python process.</p>
       <a href="https://github.com/AgentMindCloud/grok-install-cli">Repository →</a>
     </td>
   </tr>
   <tr>
     <td>
-      <h3>🌟 awesome-grok-agents</h3>
-      <p>10 certified templates — complementary to Bridge's 6 codegen templates.</p>
+      <h3>🌟 awesome-grok-agents <em>(preview)</em></h3>
+      <p>Curated agent gallery — complementary to Bridge's 8 codegen templates.</p>
       <a href="https://github.com/AgentMindCloud/awesome-grok-agents">Repository →</a>
     </td>
     <td>
-      <h3>📐 grok-yaml-standards</h3>
-      <p>12 modular YAML extensions that Bridge-generated agents can reference.</p>
+      <h3>📐 grok-yaml-standards <em>(preview)</em></h3>
+      <p>Modular YAML extensions that Bridge-generated agents can reference.</p>
       <a href="https://github.com/AgentMindCloud/grok-yaml-standards">Repository →</a>
     </td>
     <td>
-      <h3>🛒 grok-agents-marketplace</h3>
-      <p>The live marketplace at <a href="https://grokagents.dev">grokagents.dev</a>.</p>
+      <h3>🛒 grok-agents-marketplace <em>(preview)</em></h3>
+      <p>The future marketplace at <a href="https://grokagents.dev">grokagents.dev</a>. Read-only registry coming online; <code>publish --upload</code> lands in v0.3.0.</p>
       <a href="https://github.com/AgentMindCloud/grok-agents-marketplace">Repository →</a>
     </td>
   </tr>
@@ -521,7 +522,7 @@ Apache 2.0 — see [`LICENSE`](LICENSE). Copyright © 2026 Jan Solo / AgentMindC
 ## ✦ Quick Links
 
 - 🎭 **[grok-agent-orchestra](https://github.com/AgentMindCloud/grok-agent-orchestra)** — multi-agent debate + Lucas veto, the upstream half of this pipeline.
-- 📦 **[grok-install](https://github.com/AgentMindCloud/grok-install)** — universal YAML spec for declarative agents; the runtime Bridge hands off to.
+- 📦 **[grok-install](https://github.com/AgentMindCloud/grok-install)** _(preview)_ — companion Python package; the runtime Bridge hands off to on `deploy.target: x`. PyPI release pending.
 - 📚 **[Documentation](docs/)** — `build-bridge.md`, `vscode-integration.md` (full docs site coming soon).
 - 💬 **Discord** — _coming soon._ Announcements via [@JanSol0s](https://x.com/JanSol0s) until the server opens.
 - 🐦 **[X / @JanSol0s](https://x.com/JanSol0s)** — release notes, demos, support.
