@@ -24,14 +24,29 @@ host and safe to point at strangers.
 
 ## Run it locally
 
-```bash
-# From the repo root:
-pip install -e ".[live]"
+These commands go in a **terminal**, from the repo root (the directory
+that contains `pyproject.toml` — typically `~/grok-build-bridge` or
+wherever you cloned the repo):
 
-# One command, dev server with auto-reload:
+```bash
+cd /path/to/grok-build-bridge       # repo root — the one with pyproject.toml
+
+python -m venv .venv                # optional but recommended
+source .venv/bin/activate           # Windows: .venv\Scripts\activate
+
+pip install -e ".[live]"            # the `.` = this directory; `[live]` = pull FastAPI/Uvicorn/Jinja2
 uvicorn bridge_live.app:app --reload
 # → http://127.0.0.1:8000
 ```
+
+Open `http://127.0.0.1:8000` in a browser. Stop the server with
+`Ctrl+C`.
+
+> The dot in `bridge_live.app:app` is **Python module syntax**, not a
+> URL — it means "import `bridge_live.app`, find the `app` variable
+> inside it." Don't change it.
+>
+> If port 8000 is in use, add `--port 8001` to the `uvicorn` line.
 
 The first request seeds `./.passports/` with the 8 bundled template
 passports. Pass `BRIDGE_LIVE_HOME=/some/dir` to point persistence

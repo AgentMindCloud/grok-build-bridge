@@ -334,6 +334,8 @@ Scaffold any with `grok-build-bridge init <slug>`. Standalone end-to-end example
 
 `bridge.live` is a small FastAPI service that turns any `bridge.yaml` into a public, shareable "agent passport" page — parsed config, safety verdict, target, model, cost ceiling, copy-paste run command. Phases **parse → static safety only**, no Grok calls, no XAI key required, no deploys.
 
+Run it locally — both commands go in a terminal from the repo root (the directory containing `pyproject.toml`):
+
 ```bash
 pip install -e ".[live]"
 uvicorn bridge_live.app:app --reload   # → http://127.0.0.1:8000
