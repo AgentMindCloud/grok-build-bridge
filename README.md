@@ -254,11 +254,12 @@ Bottom line: **what used to take a week of glue code, manual safety review, and 
 
 ## ✦ CLI
 
-Seven commands. Every failure path prints a branded Rich panel with a "What to try next" list and exits with a typed code so scripts can react.
+Eight commands. Every failure path prints a branded Rich panel with a "What to try next" list and exits with a typed code so scripts can react.
 
 | Command | What it does |
 | --- | --- |
 | `grok-build-bridge run <file.yaml>` | Full pipeline. Flags: `--dry-run`, `--force` (bypass safety block), `--allow-stub` (permit fallback stubs when an optional dep is missing), `--verbose/-v`. |
+| `grok-build-bridge dev <file.yaml>` | 🔁 Hot-reload watcher. Re-runs phases 1-3 on every save. Flags: `--interval` (default `0.5s`), `--allow-stub`, `--verbose/-v`. Press `Ctrl+C` to exit. |
 | `grok-build-bridge validate <file.yaml>` | Parse, schema-validate, apply defaults, and pretty-print the resolved config — no network. |
 | `grok-build-bridge templates` | List bundled templates with description, required env, estimated tokens, categories. |
 | `grok-build-bridge init <slug>` | Copy a bundled template to `--out/-o` (default: cwd). `--force` skips the overwrite prompt. |
@@ -279,6 +280,47 @@ Seven commands. Every failure path prints a branded Rich panel with a "What to t
 | `GROK_INSTALL_HOME` | Optional — path to a local `grok-install-ecosystem` checkout for the `deploy_to_x` bridge. |
 
 See [`.env.example`](.env.example).
+
+## ✦ Drive Bridge from Python
+
+Bridge is also a library. Every CLI command imports the same public surface — `run_bridge`, `BridgeResult`, the typed exception hierarchy — so notebooks, CI runners, and sibling agents can drive the pipeline without shelling out.
+
+```python
+from grok_build_bridge import run_bridge, BridgePhaseError
+
+try:
+    result = run_bridge("bridge.yaml", dry_run=True)
+except BridgePhaseError as exc:
+    print(f"phase {exc.phase!r} failed: {exc.cause}")
+else:
+    print(result.safety_report.safe, result.deploy_url, result.total_tokens)
+```
+
+Re-exported names: `run_bridge`, `BridgeResult`, `SafetyReport`, `XAIClient`, `load_yaml`, plus the `BridgeConfigError` / `BridgePhaseError` / `BridgeRuntimeError` / `BridgeSafetyError` hierarchy. Worked example: [`examples/python-sdk/drive_from_python.py`](examples/python-sdk/drive_from_python.py).
+
+## ✦ GitHub Action
+
+Drop this into `.github/workflows/bridge-pr.yml` in any repo that ships a `bridge.yaml`:
+
+```yaml
+name: Bridge
+on:
+  pull_request:
+    paths: ['**/bridge.yaml']
+permissions:
+  contents: read
+  pull-requests: write
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: AgentMindCloud/grok-build-bridge/.github/actions/bridge@main
+```
+
+On every PR that touches a `bridge.yaml`, the action installs Bridge, runs `validate` + `run --dry-run --allow-stub`, posts a markdown comment with the verdict (✅ clean / 🛡️ safety block / 📄 config error), and fails the job on a safety block. Free to run — phase 2 falls back to the static-only path when `XAI_API_KEY` is not set on the runner.
+
+Inputs, outputs, and a copy-pasteable starter workflow: [`.github/actions/bridge/README.md`](.github/actions/bridge/README.md) · [`.github/workflows/bridge-pr.example.yml`](.github/workflows/bridge-pr.example.yml).
 
 ## ✦ Deploy Targets
 

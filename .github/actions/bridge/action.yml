@@ -1,0 +1,167 @@
+name: 'Bridge Validate'
+description: >-
+  Validate a bridge.yaml against the schema, dry-run the full pipeline
+  (parse → generate → static safety), and post the result as a markdown
+  comment on the PR. No XAI key required — phase 2 falls back to the
+  static-only path when XAI_API_KEY is not set.
+author: AgentMindCloud
+branding:
+  icon: zap
+  color: blue
+
+# ---------------------------------------------------------------------------
+# Inputs
+# ---------------------------------------------------------------------------
+inputs:
+  config:
+    description: >-
+      Path to the bridge.yaml file (or a glob to validate many at once,
+      passed straight to the shell).
+    required: false
+    default: bridge.yaml
+  python-version:
+    description: 'Python version to install grok-build-bridge with.'
+    required: false
+    default: '3.12'
+  package-version:
+    description: >-
+      ``pip install`` spec — defaults to the latest released wheel.
+      Override to pin a specific version (e.g. ``grok-build-bridge==0.1.0``)
+      or to install from a branch (e.g.
+      ``git+https://github.com/AgentMindCloud/grok-build-bridge@main``).
+    required: false
+    default: 'grok-build-bridge'
+  comment-on-pr:
+    description: >-
+      Whether to post a markdown summary as a PR comment. ``false``
+      keeps the action quiet — useful when you only want the exit
+      code as a status check.
+    required: false
+    default: 'true'
+  github-token:
+    description: 'Token used for the PR comment. Defaults to the workflow token.'
+    required: false
+    default: ${{ github.token }}
+  fail-on-safety:
+    description: >-
+      Fail the job (non-zero exit) when the safety scan blocks the
+      deploy. Defaults to ``true`` — silent safety failures are exactly
+      the launch-day risk this Action is supposed to prevent.
+    required: false
+    default: 'true'
+
+# ---------------------------------------------------------------------------
+# Outputs
+# ---------------------------------------------------------------------------
+outputs:
+  summary-file:
+    description: 'Path to the markdown summary written by the action.'
+    value: ${{ steps.dry-run.outputs.summary-file }}
+  validate-exit-code:
+    description: 'Exit code of `grok-build-bridge validate`. 0 = clean.'
+    value: ${{ steps.validate.outputs.exit-code }}
+  dry-run-exit-code:
+    description: 'Exit code of `grok-build-bridge run --dry-run`. 0 = clean, 4 = safety block.'
+    value: ${{ steps.dry-run.outputs.exit-code }}
+
+# ---------------------------------------------------------------------------
+# Steps
+# ---------------------------------------------------------------------------
+runs:
+  using: composite
+  steps:
+    - name: Set up Python ${{ inputs.python-version }}
+      uses: actions/setup-python@v5
+      with:
+        python-version: ${{ inputs.python-version }}
+        cache: pip
+
+    - name: Install ${{ inputs.package-version }}
+      shell: bash
+      run: python -m pip install --upgrade pip "${{ inputs.package-version }}"
+
+    - name: Validate bridge YAML
+      id: validate
+      shell: bash
+      run: |
+        set +e
+        grok-build-bridge validate "${{ inputs.config }}" 2>&1 | tee validate.txt
+        rc=${PIPESTATUS[0]}
+        echo "exit-code=$rc" >> "$GITHUB_OUTPUT"
+        exit $rc
+
+    - name: Dry-run the bridge pipeline
+      id: dry-run
+      shell: bash
+      # ``--allow-stub`` is set because CI runners almost certainly do not
+      # have ``grok_install`` or the cloud-deploy CLIs installed; without
+      # the flag, an ``x``/``railway``/``flyio`` target hard-errors before
+      # the safety scan can run. The dry-run skips phase 4 anyway, so the
+      # opt-in is purely about reaching phase 3.
+      run: |
+        set +e
+        grok-build-bridge run "${{ inputs.config }}" --dry-run --allow-stub 2>&1 | tee dry-run.txt
+        rc=${PIPESTATUS[0]}
+        echo "exit-code=$rc" >> "$GITHUB_OUTPUT"
+
+        # Build a markdown summary from the captured outputs.
+        {
+          echo "## 🌉 Bridge — \`${{ inputs.config }}\`"
+          echo
+          if [ "$rc" = "0" ]; then
+            echo "✅ **Dry-run completed** — parse, generate, and safety scan all clean."
+          elif [ "$rc" = "4" ]; then
+            echo "🛡️ **Safety scan blocked the deploy** — see the issue list below."
+          elif [ "$rc" = "2" ]; then
+            echo "📄 **Config error** — schema validation failed."
+          else
+            echo "🚫 **Runtime error** (exit $rc) — see logs."
+          fi
+          echo
+          echo "<details><summary>validate output</summary>"
+          echo
+          echo '```'
+          cat validate.txt
+          echo '```'
+          echo
+          echo "</details>"
+          echo
+          echo "<details><summary>dry-run output</summary>"
+          echo
+          echo '```'
+          cat dry-run.txt
+          echo '```'
+          echo
+          echo "</details>"
+          echo
+          echo "_Generated by [grok-build-bridge](https://github.com/AgentMindCloud/grok-build-bridge)._"
+        } > bridge-summary.md
+        echo "summary-file=bridge-summary.md" >> "$GITHUB_OUTPUT"
+
+    - name: Post PR comment
+      if: github.event_name == 'pull_request' && inputs.comment-on-pr == 'true'
+      uses: peter-evans/create-or-update-comment@v4
+      with:
+        token: ${{ inputs.github-token }}
+        issue-number: ${{ github.event.pull_request.number }}
+        body-path: bridge-summary.md
+        edit-mode: replace
+
+    - name: Append summary to GitHub Actions UI
+      shell: bash
+      # ``$GITHUB_STEP_SUMMARY`` shows up under the run page even when the
+      # PR comment is suppressed (or the job ran on push, not PR).
+      run: cat bridge-summary.md >> "$GITHUB_STEP_SUMMARY"
+
+    - name: Fail on safety block
+      if: inputs.fail-on-safety == 'true'
+      shell: bash
+      run: |
+        if [ "${{ steps.dry-run.outputs.exit-code }}" = "4" ]; then
+          echo "::error::Safety scan blocked the deploy. See the summary above."
+          exit 4
+        fi
+        if [ "${{ steps.dry-run.outputs.exit-code }}" != "0" ]; then
+          echo "::error::Bridge dry-run exited with ${{ steps.dry-run.outputs.exit-code }}."
+          exit ${{ steps.dry-run.outputs.exit-code }}
+        fi

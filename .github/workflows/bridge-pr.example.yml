@@ -1,0 +1,44 @@
+# Example GitHub Actions workflow for repos that ship a bridge.yaml.
+#
+# Copy this file to ``.github/workflows/bridge-pr.yml`` in the consuming
+# repo. The action lives in this repository (AgentMindCloud/grok-build-bridge)
+# at ``.github/actions/bridge`` — it is not a published Marketplace
+# action yet, so consumers reference it by ``owner/repo/path@ref``.
+#
+# What it does on every PR that touches a bridge.yaml:
+#
+#   1. Validate the YAML against the schema.
+#   2. Dry-run the full pipeline (parse → generate → safety).
+#   3. Post a markdown summary as a PR comment.
+#   4. Fail the job if the safety scan blocks the deploy.
+
+name: Bridge
+
+on:
+  pull_request:
+    paths:
+      - 'bridge.yaml'
+      - '**/bridge.yaml'
+  push:
+    branches: [main]
+    paths:
+      - 'bridge.yaml'
+      - '**/bridge.yaml'
+
+permissions:
+  contents: read
+  pull-requests: write  # required so the action can post the comment
+
+jobs:
+  validate:
+    name: Validate bridge.yaml
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Run Bridge Validate
+        uses: AgentMindCloud/grok-build-bridge/.github/actions/bridge@main
+        with:
+          config: bridge.yaml
+          # Pin a specific Bridge release for reproducible PR comments:
+          # package-version: 'grok-build-bridge==0.1.0'
