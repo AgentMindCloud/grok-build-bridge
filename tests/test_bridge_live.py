@@ -169,6 +169,27 @@ def test_passport_404_on_unknown_sha(isolated_app: TestClient) -> None:
 # ---------------------------------------------------------------------------
 
 
+def test_passport_json_endpoint_returns_yaml_text(isolated_app: TestClient) -> None:
+    """`/p/<sha>.json` returns a machine-readable view; `bridge fork` consumes it."""
+    r = isolated_app.post("/p", data={"yaml_text": _VALID_LOCAL_YAML}, follow_redirects=False)
+    sha = r.headers["location"].removeprefix("/p/")
+
+    page = isolated_app.get(f"/p/{sha}.json")
+    assert page.status_code == 200
+    payload = page.json()
+    assert payload["sha"] == sha
+    assert payload["name"] == "route-test"
+    assert "yaml_text" in payload and "route-test" in payload["yaml_text"]
+    # Safety block carries the verdict shape `bridge fork` does not need but
+    # the marketplace will surface — pin the keys so future renames break loud.
+    assert set(payload["safety"]) == {"safe", "issues"}
+
+
+def test_passport_json_404_on_unknown_sha(isolated_app: TestClient) -> None:
+    r = isolated_app.get("/p/deadbeef.json")
+    assert r.status_code == 404
+
+
 def test_seeded_passport_renders_safety_clean(isolated_app: TestClient) -> None:
     """The bundled templates all pass the static safety scan."""
     showcase = isolated_app.get("/showcase").text

@@ -254,7 +254,7 @@ Bottom line: **what used to take a week of glue code, manual safety review, and 
 
 ## ✦ CLI
 
-Eight commands. Every failure path prints a branded Rich panel with a "What to try next" list and exits with a typed code so scripts can react.
+Ten commands. Every failure path prints a branded Rich panel with a "What to try next" list and exits with a typed code so scripts can react.
 
 | Command | What it does |
 | --- | --- |
@@ -263,7 +263,9 @@ Eight commands. Every failure path prints a branded Rich panel with a "What to t
 | `grok-build-bridge validate <file.yaml>` | Parse, schema-validate, apply defaults, and pretty-print the resolved config — no network. |
 | `grok-build-bridge templates` | List bundled templates with description, required env, estimated tokens, categories. |
 | `grok-build-bridge init <slug>` | Copy a bundled template to `--out/-o` (default: cwd). `--force` skips the overwrite prompt. |
-| `grok-build-bridge publish <file.yaml>` | 📦 Package + manifest for the future [grokagents.dev](https://grokagents.dev) marketplace. Flags: `--version`, `--out/-o`, `--include-build`, `--dry-run`, `--author`, `--author-email`, `--license`, `--homepage`, `--repository`. |
+| `grok-build-bridge link <publisher.yaml> <veto.yaml>` | 🔗 Wire two YAMLs into a publisher / Lucas-veto pair. Writes `<publisher>.linked.yaml` (or `--in-place`) and an `orchestra-spec.yaml` sidecar consumed by [`grok-agent-orchestra`](https://github.com/AgentMindCloud/grok-agent-orchestra). |
+| `grok-build-bridge fork <source>` | 🍴 Reconstruct a `bridge.yaml` from a published `<slug>-<version>.zip`, a `manifest.json`, or an `http(s)://` passport URL. Inverse of `publish`. |
+| `grok-build-bridge publish <file.yaml>` | 📦 Package + manifest for the future [grokagents.dev](https://grokagents.dev) marketplace. Flags: `--version`, `--out/-o`, `--include-build`, `--dry-run`, `--author`, `--author-email`, `--license`, `--homepage`, `--repository`, `--upload <url>` (HTTP-PUT the zip; falls back to `BRIDGE_REGISTRY_URL`). |
 | `grok-build-bridge doctor` | 🩺 Probe the local environment — Python, `xai-sdk`, env vars, optional deploy CLIs, `grok_install`. Exits 3 if anything required is missing. |
 | `grok-build-bridge version` | Print grok-build-bridge / xai-sdk / python versions. |
 

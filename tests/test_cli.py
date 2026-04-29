@@ -16,7 +16,7 @@ from typing import Any
 import pytest
 from typer.testing import CliRunner
 
-from grok_build_bridge.cli import app
+from grok_build_bridge.cli import _EXIT_CONFIG, _EXIT_RUNTIME, app
 
 runner = CliRunner()
 
@@ -366,3 +366,162 @@ def test_watch_mtimes_drops_missing_files(tmp_path: Path) -> None:
     out = _watch_mtimes([real, ghost])
     assert real in out
     assert ghost not in out
+
+
+# ---------------------------------------------------------------------------
+# link (publisher / Lucas-veto wiring)
+# ---------------------------------------------------------------------------
+
+
+_PUBLISHER_YAML = """\
+version: "1.0"
+name: link-publisher
+description: A bot that publishes a thing.
+build:
+  source: local
+  language: python
+  entrypoint: main.py
+deploy:
+  target: x
+agent:
+  model: grok-4.20-0309
+"""
+
+_VETO_YAML = """\
+version: "1.0"
+name: link-vetoer
+description: Lucas, the veto agent that holds final say on every publish.
+build:
+  source: local
+  language: python
+  entrypoint: main.py
+deploy:
+  target: local
+agent:
+  model: grok-4.20-0309
+"""
+
+
+def _write_link_pair(root: Path) -> tuple[Path, Path]:
+    pub = root / "publisher.yaml"
+    veto = root / "veto.yaml"
+    pub.write_text(_PUBLISHER_YAML, encoding="utf-8")
+    veto.write_text(_VETO_YAML, encoding="utf-8")
+    # Both source: local — drop sibling main.py files so load_yaml works
+    # against the schema even though the linked YAMLs are never `run`.
+    for slug in ("link-publisher", "link-vetoer"):
+        (root / slug).mkdir()
+        (root / slug / "main.py").write_text("def main(): pass\n", encoding="utf-8")
+    return pub, veto
+
+
+def test_link_writes_linked_yaml_and_orchestra_spec(tmp_path: Path) -> None:
+    import yaml as yaml_lib
+
+    pub, veto = _write_link_pair(tmp_path)
+    result = runner.invoke(app, ["link", str(pub), str(veto), "--out", str(tmp_path), "--force"])
+    out = _combined_output(result)
+    assert result.exit_code == 0, out
+
+    linked = tmp_path / "publisher.linked.yaml"
+    spec = tmp_path / "orchestra-spec.yaml"
+    assert linked.is_file()
+    assert spec.is_file()
+
+    linked_doc = yaml_lib.safe_load(linked.read_text(encoding="utf-8"))
+    assert linked_doc["safety"]["lucas_veto_enabled"] is True
+
+    spec_doc = yaml_lib.safe_load(spec.read_text(encoding="utf-8"))
+    assert spec_doc["name"] == "link-publisher-with-veto"
+    agent_ids = {a["id"] for a in spec_doc["agents"]}
+    assert agent_ids == {"publisher", "veto"}
+    assert spec_doc["workflow"][0]["on_veto"] == "abort"
+    assert spec_doc["handoff"]["require_veto_pass"] is True
+
+
+def test_link_in_place_modifies_publisher(tmp_path: Path) -> None:
+    import yaml as yaml_lib
+
+    pub, veto = _write_link_pair(tmp_path)
+    result = runner.invoke(
+        app,
+        ["link", str(pub), str(veto), "--out", str(tmp_path), "--in-place", "--force"],
+    )
+    assert result.exit_code == 0, _combined_output(result)
+    # No `.linked.yaml` copy when --in-place; the publisher itself carries the flag.
+    assert not (tmp_path / "publisher.linked.yaml").exists()
+    doc = yaml_lib.safe_load(pub.read_text(encoding="utf-8"))
+    assert doc["safety"]["lucas_veto_enabled"] is True
+
+
+def test_link_rejects_self_link(tmp_path: Path) -> None:
+    pub, _ = _write_link_pair(tmp_path)
+    result = runner.invoke(app, ["link", str(pub), str(pub), "--out", str(tmp_path)])
+    out = _combined_output(result)
+    assert result.exit_code == _EXIT_CONFIG, out
+    assert "cannot be the same YAML" in out
+
+
+def test_link_rejects_invalid_yaml(tmp_path: Path) -> None:
+    bad = tmp_path / "bad.yaml"
+    bad.write_text("version: 'nope'\n", encoding="utf-8")
+    _, veto = _write_link_pair(tmp_path)
+    result = runner.invoke(app, ["link", str(bad), str(veto), "--out", str(tmp_path)])
+    assert result.exit_code == _EXIT_CONFIG
+
+
+# ---------------------------------------------------------------------------
+# fork (reconstruct bridge.yaml from a published artefact)
+# ---------------------------------------------------------------------------
+
+
+def test_fork_from_local_zip(tmp_path: Path) -> None:
+    """A zip produced by `publish` round-trips through `fork`."""
+    import json as json_lib
+    import zipfile
+
+    src_dir = tmp_path / "src"
+    src_dir.mkdir()
+    zip_path = tmp_path / "fork-test.zip"
+    with zipfile.ZipFile(zip_path, "w") as zf:
+        zf.writestr("bridge.yaml", _PUBLISHER_YAML)
+        zf.writestr(
+            "manifest.json",
+            json_lib.dumps({"name": "link-publisher", "version": "0.1.0"}),
+        )
+
+    out_dir = tmp_path / "forked"
+    result = runner.invoke(app, ["fork", str(zip_path), "--out", str(out_dir), "--force"])
+    assert result.exit_code == 0, _combined_output(result)
+    forked = out_dir / "bridge.yaml"
+    assert forked.is_file()
+    assert "link-publisher" in forked.read_text(encoding="utf-8")
+
+
+def test_fork_from_passport_json(tmp_path: Path) -> None:
+    """A bridge.live passport JSON (with yaml_text) reconstructs cleanly."""
+    import json as json_lib
+
+    passport = tmp_path / "passport.json"
+    passport.write_text(
+        json_lib.dumps({"name": "link-publisher", "yaml_text": _PUBLISHER_YAML}),
+        encoding="utf-8",
+    )
+    out_dir = tmp_path / "forked"
+    result = runner.invoke(app, ["fork", str(passport), "--out", str(out_dir), "--force"])
+    assert result.exit_code == 0, _combined_output(result)
+    assert (out_dir / "bridge.yaml").read_text(encoding="utf-8") == _PUBLISHER_YAML
+
+
+def test_fork_unknown_source_errors(tmp_path: Path) -> None:
+    result = runner.invoke(
+        app, ["fork", str(tmp_path / "missing.zip"), "--out", str(tmp_path / "x")]
+    )
+    assert result.exit_code == _EXIT_RUNTIME
+
+
+def test_fork_rejects_unsupported_extension(tmp_path: Path) -> None:
+    bogus = tmp_path / "agent.txt"
+    bogus.write_text("not a manifest", encoding="utf-8")
+    result = runner.invoke(app, ["fork", str(bogus), "--out", str(tmp_path / "out")])
+    assert result.exit_code == _EXIT_RUNTIME

@@ -197,6 +197,114 @@ def test_publish_rejects_invalid_semver(
 
 
 # ---------------------------------------------------------------------------
+# --upload (HTTP-PUT to a presigned / object-store URL)
+# ---------------------------------------------------------------------------
+
+
+def test_publish_upload_puts_zip_to_url(
+    tmp_bridge_workspace: BridgeWorkspace,
+    minimal_bridge_yaml: str,
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    """`--upload` HTTP-PUTs the zip body to the given URL with content-type set."""
+    import httpx
+
+    bridge = tmp_bridge_workspace.write_bridge(minimal_bridge_yaml)
+    captured: dict[str, object] = {}
+
+    def fake_put(
+        url: str, *, content: bytes, headers: dict[str, str], timeout: float
+    ) -> httpx.Response:
+        captured["url"] = url
+        captured["content_type"] = headers.get("Content-Type")
+        captured["body_size"] = len(content)
+        captured["timeout"] = timeout
+        return httpx.Response(200, content=b"ok")
+
+    monkeypatch.setattr("httpx.put", fake_put)
+
+    result = publish(
+        bridge,
+        version="0.1.0",
+        out_dir=tmp_path / "dist",
+        upload_url="https://example.com/bucket/key?signature=abc",
+    )
+    assert result.package_path is not None
+    assert captured["url"] == "https://example.com/bucket/key?signature=abc"
+    assert captured["content_type"] == "application/zip"
+    # Zip is non-empty and matches the on-disk size.
+    assert captured["body_size"] == result.package_path.stat().st_size
+
+
+def test_publish_upload_falls_back_to_env_var(
+    tmp_bridge_workspace: BridgeWorkspace,
+    minimal_bridge_yaml: str,
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    """When no --upload is passed, BRIDGE_REGISTRY_URL is consulted."""
+    import httpx
+
+    bridge = tmp_bridge_workspace.write_bridge(minimal_bridge_yaml)
+    monkeypatch.setenv("BRIDGE_REGISTRY_URL", "https://env-fallback.example/agents/x.zip")
+    seen: list[str] = []
+
+    def fake_put(url: str, **_: object) -> httpx.Response:
+        seen.append(url)
+        return httpx.Response(201)
+
+    monkeypatch.setattr("httpx.put", fake_put)
+
+    publish(bridge, version="0.1.0", out_dir=tmp_path / "dist")
+    assert seen == ["https://env-fallback.example/agents/x.zip"]
+
+
+def test_publish_upload_rejects_non_http_scheme(
+    tmp_bridge_workspace: BridgeWorkspace,
+    minimal_bridge_yaml: str,
+    tmp_path: Path,
+) -> None:
+    from grok_build_bridge.xai_client import BridgeRuntimeError
+
+    bridge = tmp_bridge_workspace.write_bridge(minimal_bridge_yaml)
+    with pytest.raises(BridgeRuntimeError, match="upload URL must be http"):
+        publish(
+            bridge,
+            version="0.1.0",
+            out_dir=tmp_path / "dist",
+            upload_url="ftp://nope/agents.zip",
+        )
+
+
+def test_publish_upload_surfaces_http_failure(
+    tmp_bridge_workspace: BridgeWorkspace,
+    minimal_bridge_yaml: str,
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    """A non-2xx response is a runtime error, not a silent success."""
+    import httpx
+
+    from grok_build_bridge.xai_client import BridgeRuntimeError
+
+    bridge = tmp_bridge_workspace.write_bridge(minimal_bridge_yaml)
+
+    def fake_put(url: str, **_: object) -> httpx.Response:
+        return httpx.Response(403, content=b"AccessDenied")
+
+    monkeypatch.setattr("httpx.put", fake_put)
+
+    with pytest.raises(BridgeRuntimeError, match="HTTP 403"):
+        publish(
+            bridge,
+            version="0.1.0",
+            out_dir=tmp_path / "dist",
+            upload_url="https://example.com/k",
+        )
+
+
+# ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
 

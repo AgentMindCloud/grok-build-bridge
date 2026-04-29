@@ -1,10 +1,8 @@
 """Publish layer — package a built agent for the future grokagents.dev marketplace.
 
 Produces a forward-compatible artefact that the registry consumes once it
-ships. Today the command stops at writing the zip + manifest to disk; an
-``--upload`` flag will be added in a follow-up release once the registry
-API exists. The marketplace contract lives in ``marketplace/manifest.schema.json``;
-this module is the only writer that file in the repository.
+ships. The marketplace contract lives in ``marketplace/manifest.schema.json``;
+this module is the only writer of that file in the repository.
 
 Workflow:
 
@@ -18,12 +16,16 @@ Workflow:
 5. Patch the manifest's ``package.{files, size_bytes, sha256}`` block with
    the actual zip metadata so the file in the zip and the file the
    registry receives describe the same artefact.
+6. With ``--upload <url>``, ``HTTP PUT`` the zip to ``<url>``. Designed for
+   S3-presigned URLs and any HTTP-PUT-compatible object store; the
+   official grokagents.dev endpoint is forward-declared but not live
+   yet, so today the flag's role is to let early adopters upload to
+   their own buckets and keep CDN URLs stable.
 
 Forward-compat notes:
   * ``schema_version`` is pinned to ``"1.0"``. Future versions bump this.
   * Optional fields (``safety``, ``package``, ``marketplace``,
     ``categories``, ``keywords``) can be empty in v1.0 packages.
-  * No network IO. ``--upload`` will land in v0.3.0.
 """
 
 from __future__ import annotations
@@ -32,6 +34,7 @@ import hashlib
 import importlib.resources as resources
 import json
 import logging
+import os
 import zipfile
 from collections.abc import Iterable, Mapping
 from datetime import datetime, timezone
@@ -332,6 +335,7 @@ def publish(
     repository: str | None = None,
     categories: Iterable[str] | None = None,
     keywords: Iterable[str] | None = None,
+    upload_url: str | None = None,
 ) -> PublishResult:
     """📦 Package a built agent for the future grokagents.dev marketplace.
 
@@ -341,6 +345,10 @@ def publish(
         out_dir: Where to write the zip. Defaults to ``dist/marketplace/``.
         include_build: When true, include any files under ``generated/<slug>/``.
         dry_run: Build + validate the manifest but do not write the zip.
+        upload_url: When given (and ``dry_run`` is False), HTTP-PUT the
+            zip to this URL after writing it locally. Designed for
+            S3-presigned URLs and any other HTTP-PUT-compatible object
+            store. If ``None``, ``BRIDGE_REGISTRY_URL`` is consulted.
 
     Returns:
         :class:`PublishResult` with the validated manifest and the package
@@ -348,6 +356,7 @@ def publish(
 
     Raises:
         BridgeConfigError: On schema/validation failures (exit code 2).
+        BridgeRuntimeError: On upload transport failures (exit code 3).
     """
     bridge_path = Path(bridge_yaml).expanduser().resolve()
     if not bridge_path.is_file():
@@ -416,7 +425,60 @@ def publish(
 
     _replace_manifest_in_zip(zip_path, manifest)
 
+    # ``upload_url`` is the v0.3.0 entry point referenced in cli.py. The
+    # local artefact is always written first so a transport error leaves
+    # an inspectable zip behind for the user to retry against another URL.
+    resolved_upload = upload_url or os.environ.get("BRIDGE_REGISTRY_URL")
+    if resolved_upload:
+        _upload_zip(zip_path, resolved_upload)
+
     return PublishResult(manifest=manifest, package_path=zip_path, dry_run=False)
+
+
+def _upload_zip(zip_path: Path, url: str) -> None:
+    """HTTP-PUT ``zip_path`` to ``url``.
+
+    Designed for S3-presigned URLs and any HTTP-PUT-compatible object
+    store. Streams the zip body to keep memory bounded for larger
+    ``--include-build`` packages. Raises :class:`BridgeRuntimeError`
+    on transport / status-code failures so the CLI can surface the
+    typed exit code (3) rather than spilling an httpx stack trace.
+    """
+    # Local imports keep the publish path zero-deps when --upload is unused.
+    import httpx
+
+    from grok_build_bridge.xai_client import BridgeRuntimeError
+
+    if not url.startswith(("http://", "https://")):
+        raise BridgeRuntimeError(
+            f"upload URL must be http(s): {url}",
+            suggestion="Use a presigned S3 URL or any HTTP-PUT endpoint.",
+        )
+
+    try:
+        with zip_path.open("rb") as fh:
+            response = httpx.put(
+                url,
+                content=fh.read(),
+                headers={"Content-Type": "application/zip"},
+                timeout=60.0,
+            )
+    except httpx.HTTPError as exc:
+        raise BridgeRuntimeError(
+            f"upload to {url} failed: {exc}",
+            suggestion=(
+                "Check the URL/credentials. The zip is on disk; you can "
+                "retry with `aws s3 cp` or another HTTP-PUT client."
+            ),
+        ) from exc
+
+    # 2xx is success for object stores; surface anything else as a
+    # runtime error so the user sees the response body.
+    if response.status_code >= 300:
+        raise BridgeRuntimeError(
+            f"upload returned HTTP {response.status_code}: {response.text[:200]}",
+            suggestion="Check the presigned URL has not expired.",
+        )
 
 
 def _unfreeze(value: Any) -> Any:

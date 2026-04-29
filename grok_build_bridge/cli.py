@@ -1,11 +1,13 @@
 """Typer + Rich command-line interface for ``grok-build-bridge``.
 
-Eight user-facing commands:
+Ten user-facing commands:
 
 * ``run``       — build, safety-scan, and deploy from one YAML.
 * ``validate``  — parser-only pretty-print of the resolved config.
 * ``templates`` — list bundled templates with description and required env.
 * ``init``      — copy a bundled template to the user's working directory.
+* ``link``      — wire two bridge YAMLs into a publisher / Lucas-veto pair.
+* ``fork``      — reconstruct a bridge.yaml from a published zip or passport URL.
 * ``publish``   — package a built agent for the future grokagents.dev marketplace.
 * ``dev``       — hot-reload watcher; re-runs phases 1-3 on every save.
 * ``doctor``    — probe the local environment for everything Bridge needs.
@@ -587,6 +589,349 @@ def init_cmd(
 
 
 # ---------------------------------------------------------------------------
+# `link` command — wire two bridge YAMLs into a publish/veto pair
+# ---------------------------------------------------------------------------
+
+
+@app.command("link")
+def link_cmd(
+    publisher: Path = typer.Argument(
+        ...,
+        exists=False,
+        dir_okay=False,
+        readable=True,
+        help="Bridge YAML for the agent that publishes (will be vetoed).",
+    ),
+    veto: Path = typer.Argument(
+        ...,
+        exists=False,
+        dir_okay=False,
+        readable=True,
+        help="Bridge YAML for the agent that holds the veto.",
+    ),
+    out_dir: Path = typer.Option(
+        Path.cwd(),
+        "--out",
+        "-o",
+        help="Output directory (default: cwd). Linked files are written here.",
+    ),
+    in_place: bool = typer.Option(
+        False,
+        "--in-place",
+        help="Modify the publisher YAML in place instead of writing a `.linked.yaml` copy.",
+    ),
+    force: bool = typer.Option(
+        False,
+        "--force",
+        help="Overwrite existing files without prompting.",
+    ),
+) -> None:
+    """🔗  Wire two bridge YAMLs together — publisher gets vetoed by veto agent.
+
+    Sets ``safety.lucas_veto_enabled: true`` on the publisher YAML and
+    writes an ``orchestra-spec.yaml`` sidecar that
+    [grok-agent-orchestra](https://github.com/AgentMindCloud/grok-agent-orchestra)
+    consumes to run the veto gate before each publish. The two source
+    YAMLs themselves are unchanged unless ``--in-place`` is passed.
+    """
+    if publisher.resolve() == veto.resolve():
+        _render_error_panel(
+            "🔗 Link Error",
+            BridgeRuntimeError(
+                "publisher and veto agents cannot be the same YAML",
+                suggestion="Pick a second bridge YAML to act as the veto gate.",
+            ),
+            ["Run `grok-build-bridge templates` to see candidates."],
+        )
+        raise typer.Exit(code=_EXIT_CONFIG)
+
+    try:
+        publisher_cfg = load_yaml(publisher)
+        veto_cfg = load_yaml(veto)
+    except BridgeConfigError as exc:
+        _handle_and_exit(exc)
+
+    out_dir.mkdir(parents=True, exist_ok=True)
+
+    # Re-load the publisher YAML as raw text so we can preserve the
+    # author's comments/formatting when we splice in the veto flag.
+    publisher_doc: dict[str, Any] = yaml.safe_load(publisher.read_text(encoding="utf-8")) or {}
+    publisher_doc.setdefault("safety", {})
+    publisher_doc["safety"]["lucas_veto_enabled"] = True
+
+    if in_place:
+        linked_path = publisher
+    else:
+        linked_path = out_dir / f"{publisher.stem}.linked.yaml"
+    spec_path = out_dir / "orchestra-spec.yaml"
+
+    for path in (linked_path, spec_path):
+        if path.exists() and not force and path != publisher:
+            if not typer.confirm(f"{path} already exists. Overwrite?", default=False):
+                console.print(Text(f"skipped {path}", style="brand.muted"))
+                raise typer.Exit(code=0)
+
+    linked_path.write_text(
+        yaml.safe_dump(publisher_doc, sort_keys=False, default_flow_style=False),
+        encoding="utf-8",
+    )
+    spec_path.write_text(
+        _render_orchestra_spec(
+            publisher_path=linked_path,
+            publisher_cfg=dict(publisher_cfg),
+            veto_path=veto,
+            veto_cfg=dict(veto_cfg),
+        ),
+        encoding="utf-8",
+    )
+
+    body = Text()
+    body.append("Linked ")
+    body.append(str(publisher_cfg["name"]), style="brand.primary")
+    body.append(" ⇒ vetoed by ")
+    body.append(str(veto_cfg["name"]), style="brand.accent")
+    body.append("\n\n")
+    body.append("  + ", style="brand.success")
+    body.append(f"{linked_path}\n")
+    body.append("  + ", style="brand.success")
+    body.append(f"{spec_path}\n")
+    body.append("\nNext: ", style="brand.primary")
+    body.append("`grok-orchestra run orchestra-spec.yaml`")
+    body.append(" to exercise the veto gate, or ")
+    body.append(f"`grok-build-bridge run {linked_path.name} --dry-run`")
+    body.append(" to validate the linked publisher on its own.")
+    console.print(
+        Panel(
+            body,
+            title="[brand.success]🔗  link complete[/]",
+            border_style="brand.success",
+        )
+    )
+
+
+def _render_orchestra_spec(
+    *,
+    publisher_path: Path,
+    publisher_cfg: dict[str, Any],
+    veto_path: Path,
+    veto_cfg: dict[str, Any],
+) -> str:
+    """Build a minimal orchestra-spec.yaml that wires the two bridges.
+
+    The format mirrors the curated example at
+    ``examples/orchestra-bridge/orchestra-spec.yaml`` — version, named
+    agents, an ordered workflow ending in a veto gate, and a handoff
+    block that points back at the linked bridge. Fields the linked
+    pair don't need (research phases, debate rounds) are omitted so
+    the file stays scrutable.
+    """
+    name = f"{publisher_cfg['name']}-with-veto"
+    desc = (
+        f"Linked pair generated by `grok-build-bridge link`. "
+        f"`{publisher_cfg['name']}` publishes; "
+        f"`{veto_cfg['name']}` holds the Lucas veto."
+    )
+    spec: dict[str, Any] = {
+        "version": "1.0",
+        "name": name,
+        "description": desc,
+        "agents": [
+            {
+                "id": "publisher",
+                "bridge_yaml": f"./{publisher_path.name}",
+                "role": publisher_cfg.get("description", ""),
+            },
+            {
+                "id": "veto",
+                "bridge_yaml": f"./{veto_path.name}",
+                "role": veto_cfg.get("description", ""),
+            },
+        ],
+        "workflow": [
+            {
+                "phase": "publish_with_veto",
+                "publisher": "publisher",
+                "veto_gate": "veto",
+                "on_veto": "abort",
+            },
+        ],
+        "handoff": {
+            "bridge_spec": f"./{publisher_path.name}",
+            "require_veto_pass": True,
+        },
+    }
+    header = (
+        "# Orchestra spec generated by `grok-build-bridge link`.\n"
+        "# Edit freely — Bridge will not regenerate this file unless you re-run\n"
+        "# `link` with the same outputs.\n\n"
+    )
+    return header + yaml.safe_dump(spec, sort_keys=False, default_flow_style=False)
+
+
+# ---------------------------------------------------------------------------
+# `fork` command — reconstruct a bridge.yaml from a published artefact
+# ---------------------------------------------------------------------------
+
+
+@app.command("fork")
+def fork_cmd(
+    source: str = typer.Argument(
+        ...,
+        help=(
+            "Source artefact: a path to a `<slug>-<version>.zip` produced by "
+            "`publish`, a path to a manifest.json, or a `bridge.live/p/<sha>.json` URL."
+        ),
+    ),
+    out_dir: Path = typer.Option(
+        Path.cwd(),
+        "--out",
+        "-o",
+        help="Destination directory for the reconstructed bridge.yaml.",
+    ),
+    force: bool = typer.Option(
+        False,
+        "--force",
+        help="Overwrite an existing bridge.yaml without prompting.",
+    ),
+) -> None:
+    """🍴  Reconstruct a bridge.yaml from a published manifest or passport.
+
+    Three accepted source shapes:
+
+    * A path to a ``<slug>-<version>.zip`` produced by ``publish`` —
+      the inverse direction; the zip's ``bridge.yaml`` lands in
+      ``--out``.
+    * A path to a standalone ``manifest.json`` (or a passport JSON
+      from ``bridge.live``) — the embedded ``yaml_text`` is
+      reconstructed into a working file.
+    * An ``http(s)://`` URL pointing at the same JSON shape — fetched
+      via ``httpx``. Public registries (grokagents.dev) are not live
+      yet; until they are, paste a ``bridge.live/p/<sha>.json`` URL.
+    """
+    out_dir.mkdir(parents=True, exist_ok=True)
+    target = out_dir / "bridge.yaml"
+    if target.exists() and not force:
+        if not typer.confirm(f"{target} already exists. Overwrite?", default=False):
+            console.print(Text(f"skipped {target}", style="brand.muted"))
+            raise typer.Exit(code=0)
+
+    try:
+        yaml_text, name = _fetch_fork_source(source)
+    except BridgeRuntimeError as exc:
+        _handle_and_exit(exc)
+
+    target.write_text(yaml_text, encoding="utf-8")
+    body = Text()
+    body.append("Forked ")
+    body.append(name, style="brand.primary")
+    body.append(" from ", style="brand.muted")
+    body.append(source)
+    body.append("\n\n")
+    body.append("  + ", style="brand.success")
+    body.append(f"{target}\n")
+    body.append("\nNext: ", style="brand.primary")
+    body.append("edit the YAML, then run `grok-build-bridge run bridge.yaml --dry-run`.")
+    console.print(
+        Panel(
+            body,
+            title="[brand.success]🍴  fork complete[/]",
+            border_style="brand.success",
+        )
+    )
+
+
+def _fetch_fork_source(source: str) -> tuple[str, str]:
+    """Resolve ``source`` to ``(yaml_text, name)``.
+
+    Accepts an HTTP(S) URL, a local path to a zip, or a local path to
+    a JSON manifest (either the marketplace ``manifest.json`` or a
+    ``bridge.live`` passport JSON — both carry ``yaml_text`` plus the
+    agent's ``name``).
+    """
+    import json
+    import zipfile
+
+    # ---- URL ----
+    if source.startswith(("http://", "https://")):
+        import httpx  # local import: avoids hard dep at module load
+
+        try:
+            response = httpx.get(source, follow_redirects=True, timeout=10.0)
+            response.raise_for_status()
+        except httpx.HTTPError as exc:
+            raise BridgeRuntimeError(
+                f"could not fetch {source}: {exc}",
+                suggestion="Check the URL or paste a local manifest path instead.",
+            ) from exc
+        return _yaml_from_json_payload(response.json(), origin=source)
+
+    path = Path(source)
+    if not path.exists():
+        raise BridgeRuntimeError(
+            f"fork source not found: {source}",
+            suggestion="Pass a local path or a URL.",
+        )
+
+    # ---- ZIP ----
+    if path.suffix == ".zip":
+        try:
+            with zipfile.ZipFile(path) as zf:
+                names = zf.namelist()
+                if "bridge.yaml" not in names:
+                    raise BridgeRuntimeError(
+                        f"{path} is missing bridge.yaml",
+                        suggestion="Forked zips are produced by `grok-build-bridge publish`.",
+                    )
+                yaml_bytes = zf.read("bridge.yaml")
+                manifest_bytes = zf.read("manifest.json") if "manifest.json" in names else b"{}"
+        except zipfile.BadZipFile as exc:
+            raise BridgeRuntimeError(
+                f"{path} is not a valid zip", suggestion="Re-run publish to regenerate."
+            ) from exc
+        manifest = json.loads(manifest_bytes or b"{}")
+        return yaml_bytes.decode("utf-8"), str(manifest.get("name") or path.stem)
+
+    # ---- JSON ----
+    if path.suffix == ".json":
+        return _yaml_from_json_payload(
+            json.loads(path.read_text(encoding="utf-8")), origin=str(path)
+        )
+
+    raise BridgeRuntimeError(
+        f"unrecognised fork source: {source}",
+        suggestion="Use a .zip, a .json manifest, or an http(s):// URL.",
+    )
+
+
+def _yaml_from_json_payload(payload: dict[str, Any], *, origin: str) -> tuple[str, str]:
+    """Pull the ``bridge.yaml`` body out of a manifest or passport JSON.
+
+    Two shapes are recognised:
+
+    * Marketplace manifest (``marketplace/manifest.schema.json``) —
+      the ``bridge`` block describes the agent but does not embed the
+      raw YAML; the ``package`` block carries metadata, not bytes.
+      For this case the caller must supply the original zip.
+    * ``bridge.live`` passport — exposes ``yaml_text`` directly.
+
+    Future revisions of the marketplace schema will add ``yaml_text``
+    so the manifest is round-trippable on its own; until then, the
+    passport URL is the recommended path.
+    """
+    yaml_text = payload.get("yaml_text")
+    if isinstance(yaml_text, str) and yaml_text.strip():
+        name = str(payload.get("name") or "")
+        return yaml_text, name or origin
+    raise BridgeRuntimeError(
+        f"{origin} does not embed yaml_text",
+        suggestion=(
+            "Use the published zip, or paste a bridge.live passport URL "
+            "(`/p/<sha>.json`) which exposes the raw YAML."
+        ),
+    )
+
+
+# ---------------------------------------------------------------------------
 # `publish` command — marketplace packaging foundation
 # ---------------------------------------------------------------------------
 
@@ -634,6 +979,15 @@ def publish_cmd(
     ),
     homepage: str = typer.Option(None, "--homepage", help="Homepage URL for the published agent."),
     repository: str = typer.Option(None, "--repository", help="Source repository URL."),
+    upload_url: str = typer.Option(
+        None,
+        "--upload",
+        help=(
+            "After writing the zip, HTTP-PUT it to this URL. Designed for "
+            "S3-presigned URLs and any HTTP-PUT-compatible object store. "
+            "Falls back to the BRIDGE_REGISTRY_URL env var when omitted."
+        ),
+    ),
     verbose: bool = typer.Option(
         False, "--verbose", "-v", help="Print full tracebacks on failure."
     ),
@@ -659,6 +1013,7 @@ def publish_cmd(
             license_id=license_id,
             homepage=homepage,
             repository=repository,
+            upload_url=upload_url,
         )
     except (BridgeConfigError, BridgeRuntimeError) as exc:
         _handle_and_exit(exc, verbose=verbose)
@@ -677,15 +1032,18 @@ def publish_cmd(
         table.add_row("package", f"{result.package_path}  ({size_kb:.1f} KB)")
         table.add_row("sha256", result.manifest.get("package", {}).get("sha256", "")[:16] + "…")
         registry = result.manifest.get("marketplace", {}).get("registry_url", "")
-        table.add_row("future upload", registry)
+        table.add_row("future registry", registry)
+        resolved_upload = upload_url or os.environ.get("BRIDGE_REGISTRY_URL")
+        if resolved_upload:
+            table.add_row("uploaded to", resolved_upload)
 
     title = "📦  publish — dry-run" if result.dry_run else "📦  publish — package ready"
     console.print(Panel(table, border_style="brand.primary", title=title))
 
-    if not result.dry_run:
+    if not result.dry_run and not (upload_url or os.environ.get("BRIDGE_REGISTRY_URL")):
         console.print(
-            "[brand.muted]grokagents.dev upload endpoint is not live yet. "
-            "Keep the zip; `--upload` lands in v0.3.0.[/]"
+            "[brand.muted]grokagents.dev registry not live yet. Pass `--upload <url>` "
+            "(or set BRIDGE_REGISTRY_URL) to push the zip to your own bucket today.[/]"
         )
 
 

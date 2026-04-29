@@ -28,7 +28,7 @@ from urllib.parse import urlencode
 
 import yaml
 from fastapi import FastAPI, Form, HTTPException, Request, UploadFile
-from fastapi.responses import HTMLResponse, RedirectResponse, Response
+from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse, Response
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
@@ -144,8 +144,18 @@ def create_app() -> FastAPI:
         store.save(passport)
         return RedirectResponse(url=f"/p/{passport.sha}", status_code=303)
 
-    @app.get("/p/{sha}", response_class=HTMLResponse)
+    @app.get("/p/{sha}")
     def passport(request: Request, sha: str) -> Any:
+        # ``.json`` suffix is the machine-readable variant; ``bridge fork``
+        # consumes it. Routing here (rather than a separate path) keeps
+        # Starlette's path matcher predictable — any other dot-suffix is
+        # treated as a sha and 404s naturally if not found.
+        if sha.endswith(".json"):
+            loaded = store.load(sha[: -len(".json")])
+            if loaded is None:
+                raise HTTPException(status_code=404, detail="Passport not found.")
+            return JSONResponse(_passport_to_dict(loaded))
+
         loaded = store.load(sha)
         if loaded is None:
             raise HTTPException(status_code=404, detail="Passport not found.")
@@ -175,6 +185,30 @@ def create_app() -> FastAPI:
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
+
+
+def _passport_to_dict(p: store.Passport) -> dict[str, Any]:
+    """Serialise a :class:`Passport` into the JSON shape ``bridge fork`` consumes.
+
+    Kept as a separate helper so tests can pin the contract independently
+    of any future render-side changes.
+    """
+    return {
+        "sha": p.sha,
+        "name": p.name,
+        "description": p.description,
+        "yaml_text": p.yaml_text,
+        "target": p.target,
+        "model": p.model,
+        "source": p.source,
+        "language": p.language,
+        "entrypoint": p.entrypoint,
+        "tools": p.tools,
+        "schedule": p.schedule,
+        "safety": {"safe": p.safety_safe, "issues": p.safety_issues},
+        "estimated_tokens": p.estimated_tokens,
+        "seeded": p.seeded,
+    }
 
 
 async def _resolve_yaml_payload(yaml_text: str, upload: UploadFile | None) -> str:
