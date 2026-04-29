@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+
+{% block title %}bridge.live — drop a bridge.yaml, get a passport{% endblock %}
+
+{% block body %}
+<section class="hero">
+  <h1>One YAML in. <span class="accent">A public passport out.</span></h1>
+  <p class="lede">
+    Paste a <code>bridge.yaml</code>, get a shareable URL with the parsed config,
+    safety verdict, target, model, and the exact CLI command to run it locally.
+    Backed by <code>grok-build-bridge</code>.
+  </p>
+</section>
+
+<section class="card">
+  <form action="/p" method="post" enctype="multipart/form-data">
+    <label for="yaml_text" class="form-label">
+      Paste your <code>bridge.yaml</code>
+      {% if topic %}<span class="badge badge-accent">prefilled for: {{ topic }}</span>{% endif %}
+    </label>
+    <textarea
+      id="yaml_text"
+      name="yaml_text"
+      rows="22"
+      spellcheck="false"
+      placeholder="version: &quot;1.0&quot;&#10;name: my-agent&#10;description: ...">{{ prefilled }}</textarea>
+
+    <div class="form-row">
+      <input type="file" name="upload" accept=".yaml,.yml,text/yaml" />
+      <button type="submit" class="btn btn-primary">Inspect →</button>
+    </div>
+    <p class="form-hint">
+      The YAML never leaves the inspector — no Grok calls, no deploys, no XAI key required.
+    </p>
+  </form>
+</section>
+
+<section class="grid">
+  <article class="info-card">
+    <h3>📄 Phase 1 · Parse</h3>
+    <p>Strict Draft 2020-12 schema, defaults filled, frozen. Bad keys fail fast with a key-path.</p>
+  </article>
+  <article class="info-card">
+    <h3>🛡️ Phase 3 · Safety</h3>
+    <p>Compiled regex catalog flags secrets, <code>eval()</code>, <code>shell=True</code>, missing timeouts.</p>
+  </article>
+  <article class="info-card">
+    <h3>🚀 Run locally</h3>
+    <p>Every passport ends with the exact <code>pip install</code> + <code>run</code> incantation.</p>
+  </article>
+</section>
+{% endblock %}

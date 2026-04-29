@@ -90,3 +90,6 @@ dmypy.json
 
 # Grok Build Bridge runtime output
 generated/
+
+# bridge.live local passport store (default BRIDGE_LIVE_HOME)
+.passports/

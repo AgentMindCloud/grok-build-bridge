@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+
+{% block title %}Showcase · bridge.live{% endblock %}
+
+{% block body %}
+<section class="hero">
+  <h1>Showcase</h1>
+  <p class="lede">
+    The {{ passports|length }} certified templates that ship in
+    <code>grok-build-bridge</code>, rendered as live passports. Click any card to
+    see the parsed config + safety verdict, or copy the YAML to start your own.
+  </p>
+</section>
+
+<section class="grid">
+  {% for p in passports %}
+  <a class="passport-card" href="/p/{{ p.sha }}">
+    <header>
+      <h3>{{ p.name }}</h3>
+      <div class="passport-card-badges">
+        {% if p.safety_safe %}
+          <span class="badge badge-success">✓ safe</span>
+        {% else %}
+          <span class="badge badge-error">✗ {{ p.safety_issues|length }}</span>
+        {% endif %}
+        <span class="badge badge-target">{{ p.target }}</span>
+      </div>
+    </header>
+    <p>{{ p.description }}</p>
+    <footer>
+      <code class="muted">{{ p.source }}</code>
+      {% if p.schedule %}
+        <span class="muted">·</span>
+        <code class="muted">{{ p.schedule }}</code>
+      {% endif %}
+    </footer>
+  </a>
+  {% else %}
+  <p class="muted">No seeded passports yet. Restart the server to re-seed.</p>
+  {% endfor %}
+</section>
+{% endblock %}

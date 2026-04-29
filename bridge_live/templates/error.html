@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+
+{% block title %}Invalid bridge.yaml · bridge.live{% endblock %}
+
+{% block body %}
+<section class="hero">
+  <h1>🚫 Invalid bridge.yaml</h1>
+  <p class="lede">{{ error.message }}</p>
+</section>
+
+<section class="card card-error">
+  <dl>
+    {% if error.key_path %}
+      <dt>key</dt>
+      <dd><code>{{ error.key_path|join('.') }}</code></dd>
+    {% endif %}
+    {% if error.expected %}
+      <dt>expected</dt>
+      <dd><code>{{ error.expected }}</code></dd>
+    {% endif %}
+    {% if error.line %}
+      <dt>location</dt>
+      <dd><code>line {{ error.line }}{% if error.column %}, column {{ error.column }}{% endif %}</code></dd>
+    {% endif %}
+  </dl>
+</section>
+
+<section class="card">
+  <h3>Your YAML</h3>
+  <pre class="yaml-block"><code>{{ yaml_text }}</code></pre>
+  <p class="form-hint">
+    Fix the issue above and <a href="/">try again</a>, or run
+    <code>grok-build-bridge validate bridge.yaml</code> locally for the same diagnostic.
+  </p>
+</section>
+{% endblock %}

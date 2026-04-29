@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>{% block title %}bridge.live{% endblock %}</title>
+  <meta name="description" content="Drop a bridge.yaml, get a public agent passport. Backed by grok-build-bridge." />
+  <link rel="stylesheet" href="/static/style.css" />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><text y='20' font-size='20'>⚡</text></svg>" />
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="/">
+      <span class="brand-glyph">⚡</span>
+      <span class="brand-text">bridge<span class="brand-dot">.</span>live</span>
+    </a>
+    <nav>
+      <a href="/">Inspect</a>
+      <a href="/showcase">Showcase</a>
+      <a href="https://github.com/AgentMindCloud/grok-build-bridge" target="_blank" rel="noopener">GitHub ↗</a>
+    </nav>
+  </header>
+
+  <main>
+    {% block body %}{% endblock %}
+  </main>
+
+  <footer class="footer">
+    <p>
+      <code>bridge.live</code> is a read-only inspector for
+      <a href="https://github.com/AgentMindCloud/grok-build-bridge" target="_blank" rel="noopener">grok-build-bridge</a>.
+      Phases <strong>parse → static safety</strong> only — no Grok calls, no deploys.
+    </p>
+  </footer>
+</body>
+</html>

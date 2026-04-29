@@ -1,0 +1,91 @@
+{% extends "base.html" %}
+
+{% block title %}{{ passport.name }} · bridge.live passport{% endblock %}
+
+{% block body %}
+<section class="passport-header">
+  <div>
+    <h1>{{ passport.name }}</h1>
+    <p class="lede">{{ passport.description }}</p>
+  </div>
+  <div class="passport-badges">
+    {% if passport.safety_safe %}
+      <span class="badge badge-success">✓ safe</span>
+    {% else %}
+      <span class="badge badge-error">✗ {{ passport.safety_issues|length }} issue(s)</span>
+    {% endif %}
+    <span class="badge badge-target">{{ passport.target }}</span>
+    <span class="badge badge-model">{{ passport.model }}</span>
+  </div>
+</section>
+
+<section class="passport-grid">
+  <div class="meta-card">
+    <h3>Build</h3>
+    <dl>
+      <dt>source</dt><dd><code>{{ passport.source }}</code></dd>
+      <dt>language</dt><dd><code>{{ passport.language }}</code></dd>
+      <dt>entrypoint</dt><dd><code>{{ passport.entrypoint }}</code></dd>
+      {% if passport.tools %}
+      <dt>tools</dt>
+      <dd>
+        {% for tool in passport.tools %}<code>{{ tool }}</code>{% if not loop.last %} · {% endif %}{% endfor %}
+      </dd>
+      {% endif %}
+    </dl>
+  </div>
+
+  <div class="meta-card">
+    <h3>Deploy</h3>
+    <dl>
+      <dt>target</dt><dd><code>{{ passport.target }}</code></dd>
+      {% if passport.schedule %}
+        <dt>schedule</dt><dd><code>{{ passport.schedule }}</code></dd>
+      {% endif %}
+    </dl>
+  </div>
+
+  <div class="meta-card">
+    <h3>Budget</h3>
+    <dl>
+      <dt>max tokens / run</dt>
+      <dd><code>{{ "{:,}".format(passport.estimated_tokens) }}</code></dd>
+    </dl>
+  </div>
+</section>
+
+{% if not passport.safety_safe %}
+<section class="card card-warn">
+  <h3>🛡️ Static safety findings</h3>
+  <ul>
+    {% for issue in passport.safety_issues %}
+    <li><code>{{ issue }}</code></li>
+    {% endfor %}
+  </ul>
+  <p class="form-hint">
+    These come from the regex layer of <a href="https://github.com/AgentMindCloud/grok-build-bridge/blob/main/grok_build_bridge/_patterns.py" target="_blank" rel="noopener"><code>grok_build_bridge._patterns</code></a>.
+    The full pipeline also runs a Grok-in-the-loop audit before any deploy.
+  </p>
+</section>
+{% endif %}
+
+<section class="card">
+  <h3>Run this locally</h3>
+  <pre class="run-block"><code>pip install grok-build-bridge
+# save the YAML below to bridge.yaml, then:
+grok-build-bridge run bridge.yaml --dry-run</code></pre>
+</section>
+
+<section class="card">
+  <h3>The YAML</h3>
+  <pre class="yaml-block"><code>{{ passport.yaml_text }}</code></pre>
+</section>
+
+<section class="passport-footer">
+  <p>
+    Passport <code>{{ passport.sha }}</code> ·
+    <a href="/">Inspect another</a> ·
+    <a href="/showcase">Browse showcase</a>
+  </p>
+</section>
+{% endblock %}

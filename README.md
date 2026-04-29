@@ -330,6 +330,19 @@ Worked examples: [`examples/railway.yaml`](examples/railway.yaml) · [`examples/
 
 Scaffold any with `grok-build-bridge init <slug>`. Standalone end-to-end example: [`examples/hello.yaml`](examples/hello.yaml) + [`examples/hello-bridge/main.py`](examples/hello-bridge/main.py).
 
+## ✦ bridge.live · the public Inspector <span style="font-weight:400">_(self-host preview)_</span>
+
+`bridge.live` is a small FastAPI service that turns any `bridge.yaml` into a public, shareable "agent passport" page — parsed config, safety verdict, target, model, cost ceiling, copy-paste run command. Phases **parse → static safety only**, no Grok calls, no XAI key required, no deploys.
+
+```bash
+pip install -e ".[live]"
+uvicorn bridge_live.app:app --reload   # → http://127.0.0.1:8000
+```
+
+Routes: `/` (paste-or-upload), `/p/<sha8>` (passport page), `/showcase` (the 8 bundled templates rendered as live passports), `/launch?topic=...` (deep-link scaffold).
+
+Source + Dockerfile + one-liner deploy steps for Fly.io / Render / Railway / Vercel: [`bridge_live/`](bridge_live/).
+
 ## ✦ Publish to Marketplace <span style="font-weight:400">_(preview)_</span>
 
 <p align="center">
