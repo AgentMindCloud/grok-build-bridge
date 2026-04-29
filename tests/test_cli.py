@@ -307,3 +307,62 @@ def test_doctor_warns_on_optional_cli(monkeypatch: pytest.MonkeyPatch) -> None:
     # Each optional CLI row should show the warn glyph somewhere in the table.
     for cli in ("vercel", "railway", "flyctl", "grok-build"):
         assert cli in out
+
+
+# ---------------------------------------------------------------------------
+# dev (hot-reload watcher)
+# ---------------------------------------------------------------------------
+
+
+def test_dev_help_documents_interval_and_allow_stub() -> None:
+    result = runner.invoke(app, ["dev", "--help"])
+    out = _combined_output(result)
+    assert result.exit_code == 0, out
+    assert "--interval" in out
+    assert "--allow-stub" in out
+
+
+def test_dev_missing_yaml_exits_config(tmp_path: Path) -> None:
+    result = runner.invoke(app, ["dev", str(tmp_path / "nope.yaml")])
+    # ``dev`` rejects a missing YAML up front rather than entering the
+    # watch loop with nothing to poll.
+    assert result.exit_code == 2
+
+
+def test_watch_paths_skips_generated_and_caches(tmp_path: Path) -> None:
+    """The watcher must ignore directories the pipeline writes to."""
+    from grok_build_bridge.cli import _watch_paths
+
+    yaml_path = tmp_path / "bridge.yaml"
+    yaml_path.write_text("name: x", encoding="utf-8")
+    (tmp_path / "main.py").write_text("# ok", encoding="utf-8")
+
+    # Directories the watcher is supposed to skip — populating them with
+    # tripwire files lets us assert they are absent from the watch set.
+    (tmp_path / "generated" / "x").mkdir(parents=True)
+    (tmp_path / "generated" / "x" / "should-be-ignored.json").write_text("{}")
+    (tmp_path / "__pycache__").mkdir()
+    (tmp_path / "__pycache__" / "skip.pyc").write_text("x")
+    (tmp_path / ".passports").mkdir()
+    (tmp_path / ".passports" / "abc.json").write_text("{}")
+
+    paths = _watch_paths(yaml_path)
+    names = {p.name for p in paths}
+    assert "bridge.yaml" in names
+    assert "main.py" in names
+    assert "should-be-ignored.json" not in names
+    assert "skip.pyc" not in names
+    assert "abc.json" not in names
+
+
+def test_watch_mtimes_drops_missing_files(tmp_path: Path) -> None:
+    """``_watch_mtimes`` must tolerate files that vanish mid-scan."""
+    from grok_build_bridge.cli import _watch_mtimes
+
+    real = tmp_path / "real.yaml"
+    real.write_text("name: x", encoding="utf-8")
+    ghost = tmp_path / "ghost.yaml"
+
+    out = _watch_mtimes([real, ghost])
+    assert real in out
+    assert ghost not in out

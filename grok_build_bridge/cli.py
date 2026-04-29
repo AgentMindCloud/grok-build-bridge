@@ -1,12 +1,13 @@
 """Typer + Rich command-line interface for ``grok-build-bridge``.
 
-Seven user-facing commands:
+Eight user-facing commands:
 
 * ``run``       — build, safety-scan, and deploy from one YAML.
 * ``validate``  — parser-only pretty-print of the resolved config.
 * ``templates`` — list bundled templates with description and required env.
 * ``init``      — copy a bundled template to the user's working directory.
 * ``publish``   — package a built agent for the future grokagents.dev marketplace.
+* ``dev``       — hot-reload watcher; re-runs phases 1-3 on every save.
 * ``doctor``    — probe the local environment for everything Bridge needs.
 * ``version``   — show grok-build-bridge / xai-sdk / python versions.
 
@@ -213,6 +214,150 @@ def run_cmd(
         _handle_and_exit(exc, verbose=verbose)
     if not result.success:
         raise typer.Exit(code=_EXIT_RUNTIME)
+
+
+# ---------------------------------------------------------------------------
+# `dev` command — hot-reload watcher
+# ---------------------------------------------------------------------------
+
+
+# Directories the watcher must skip. Polling them is wasteful, and ``generated/``
+# specifically would loop forever because every dry-run rewrites the manifest.
+_WATCH_IGNORE: Final[frozenset[str]] = frozenset(
+    {
+        "generated",
+        ".git",
+        ".venv",
+        "venv",
+        ".passports",
+        "__pycache__",
+        ".mypy_cache",
+        ".ruff_cache",
+        "node_modules",
+    }
+)
+
+
+@app.command("dev")
+def dev_cmd(
+    config: Path = typer.Argument(
+        ...,
+        exists=False,
+        dir_okay=False,
+        readable=True,
+        help="Path to the bridge YAML file.",
+    ),
+    interval: float = typer.Option(
+        0.5,
+        "--interval",
+        help="Polling interval in seconds. Lower = snappier reload, more CPU.",
+        min=0.1,
+        max=10.0,
+    ),
+    allow_stub: bool = typer.Option(
+        False,
+        "--allow-stub",
+        help="Permit fallback stubs when an optional dependency is missing.",
+    ),
+    verbose: bool = typer.Option(
+        False, "--verbose", "-v", help="Print full tracebacks on failure."
+    ),
+) -> None:
+    """🔁 Watch a bridge YAML and re-run phases 1-3 on every save.
+
+    Iteration loop for working on a bridge.yaml without retyping
+    ``run --dry-run`` every time. The watcher polls the YAML and any
+    sibling source files, ignoring ``generated/``, ``.passports/``,
+    ``.git/``, ``__pycache__``, and the usual virtualenv directories.
+    Press Ctrl+C to exit.
+    """
+    import time
+
+    from grok_build_bridge.runtime import BridgePhaseError, run_bridge
+
+    if not config.is_file():
+        _render_error_panel(
+            "📄 Config Error",
+            BridgeConfigError(f"bridge YAML not found: {config}"),
+            ["Pass an existing path: `grok-build-bridge dev path/to/bridge.yaml`."],
+        )
+        raise typer.Exit(code=_EXIT_CONFIG)
+
+    print_banner(console)
+    console.print(
+        Panel(
+            Text.from_markup(
+                f"[brand.primary]🔁 dev[/]  watching [brand.muted]{config}[/]"
+                f" — interval [brand.muted]{interval:.2f}s[/] · [brand.muted]Ctrl+C[/] to exit"
+            ),
+            border_style="brand.secondary",
+        )
+    )
+
+    last_mtimes: dict[Path, float] = {}
+    iteration = 0
+    try:
+        while True:
+            current = _watch_mtimes(_watch_paths(config))
+            if iteration == 0 or current != last_mtimes:
+                last_mtimes = current
+                iteration += 1
+                console.rule(f"[brand.muted]run #{iteration}  ·  {time.strftime('%H:%M:%S')}[/]")
+                try:
+                    run_bridge(config, dry_run=True, allow_stub=allow_stub)
+                except BridgeConfigError as exc:
+                    _render_error_panel("📄 Config Error", exc, _hints_for(exc))
+                except BridgePhaseError as exc:
+                    _render_error_panel(
+                        "🚫 Phase Error", exc.cause or exc, _hints_for(exc.cause or exc)
+                    )
+                    if verbose:
+                        console.print_exception(show_locals=False)
+                except BridgeRuntimeError as exc:
+                    _render_error_panel("🚫 Runtime Error", exc, _hints_for(exc))
+                    if verbose:
+                        console.print_exception(show_locals=False)
+            time.sleep(interval)
+    except KeyboardInterrupt:
+        console.print(Text("👋  bye", style="brand.muted"))
+        raise typer.Exit(code=0) from None
+
+
+def _watch_paths(config: Path) -> set[Path]:
+    """Compute the set of files the dev watcher should poll.
+
+    Walks the YAML's parent directory, skipping the well-known
+    machine-generated and virtualenv directories listed in
+    :data:`_WATCH_IGNORE`. Returns the YAML path itself even when the
+    parent walk finds nothing, so a freshly-created bridge in an
+    otherwise-empty cwd still gets reloaded on save.
+    """
+    paths: set[Path] = {config}
+    root = config.parent
+    if not root.exists():
+        return paths
+    for entry in root.rglob("*"):
+        if any(part in _WATCH_IGNORE for part in entry.parts):
+            continue
+        if entry.is_file():
+            paths.add(entry)
+    return paths
+
+
+def _watch_mtimes(paths: Iterable[Path]) -> dict[Path, float]:
+    """Snapshot ``path → mtime`` for every existing file in ``paths``.
+
+    Files that disappear between calls drop out of the dict, and that
+    counts as a change in the next comparison — saving + atomic-renaming
+    a YAML (the editor pattern most Python tools use) flips the mtime.
+    """
+    out: dict[Path, float] = {}
+    for p in paths:
+        try:
+            out[p] = p.stat().st_mtime
+        except FileNotFoundError:
+            continue
+    return out
 
 
 # ---------------------------------------------------------------------------
