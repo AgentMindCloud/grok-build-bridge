@@ -29,9 +29,9 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/PyPI%20Pending-00E5FF?style=for-the-badge&logoColor=001018&labelColor=0A0D14" />
-  <a href="LICENSE"><img src="https://img.shields.io/badge/Apache%202.0-7C3AED?style=for-the-badge&logoColor=FFFFFF&labelColor=0A0D14" /></a>
-  <a href="https://www.python.org/downloads/"><img src="https://img.shields.io/badge/Python%203.10+-FF4FD8?style=for-the-badge&logo=python&logoColor=FFFFFF&labelColor=0A0D14" /></a>
+  <a href="https://pypi.org/project/grok-build-bridge/"><img src="https://img.shields.io/pypi/pyversions/grok-build-bridge?style=for-the-badge&color=FF4FD8&labelColor=0A0D14&logo=python&logoColor=FFFFFF" alt="Python versions" /></a>
+  <a href="https://pypi.org/project/grok-build-bridge/"><img src="https://img.shields.io/pypi/dm/grok-build-bridge?style=for-the-badge&color=00E5FF&labelColor=0A0D14&logo=pypi&logoColor=FFFFFF" alt="Downloads" /></a>
+  <a href="https://pypi.org/project/grok-build-bridge/"><img src="https://img.shields.io/pypi/l/grok-build-bridge?style=for-the-badge&color=7C3AED&labelColor=0A0D14" alt="License" /></a>
   <a href="https://x.ai"><img src="https://img.shields.io/badge/Grok%204.20-00D5FF?style=for-the-badge&logoColor=001018&labelColor=0A0D14" /></a>
   <a href="https://x.ai"><img src="https://img.shields.io/badge/xAI%20Aligned-9D4EDD?style=for-the-badge&logoColor=FFFFFF&labelColor=0A0D14" /></a>
   <img src="https://img.shields.io/badge/Coverage%2085%25-5EF2FF?style=for-the-badge&logoColor=001018&labelColor=0A0D14" />

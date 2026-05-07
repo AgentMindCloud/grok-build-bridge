@@ -1,5 +1,5 @@
 [build-system]
-requires = ["hatchling>=1.24"]
+requires = ["hatchling>=1.27"]
 build-backend = "hatchling.build"
 
 [project]
@@ -7,7 +7,8 @@ name = "grok-build-bridge"
 version = "0.1.0"
 description = "Production-ready X agents from Grok 4.20 — two-layer safety audit (static + LLM), xai-sdk integration, multi-target deploy (X / Vercel / Render / local), scheduling, dry-run, templates, VS Code IntelliSense, Orchestra-ready."
 readme = "README.md"
-license = { file = "LICENSE" }
+license = "Apache-2.0"
+license-files = ["LICENSE"]
 requires-python = ">=3.10"
 authors = [{ name = "Jan Solo", email = "jan@agentmind.cloud" }]
 maintainers = [{ name = "AgentMindCloud" }]
@@ -15,7 +16,6 @@ keywords = ["grok", "xai", "x", "twitter", "agent", "bridge", "deployment", "saf
 classifiers = [
     "Development Status :: 4 - Beta",
     "Intended Audience :: Developers",
-    "License :: OSI Approved :: Apache Software License",
     "Operating System :: OS Independent",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.10",
@@ -65,7 +65,9 @@ live = [
 [project.urls]
 Homepage = "https://github.com/AgentMindCloud/grok-build-bridge"
 Repository = "https://github.com/AgentMindCloud/grok-build-bridge"
+Documentation = "https://github.com/AgentMindCloud/grok-build-bridge#readme"
 Issues = "https://github.com/AgentMindCloud/grok-build-bridge/issues"
+Changelog = "https://github.com/AgentMindCloud/grok-build-bridge/blob/main/CHANGELOG.md"
 Ecosystem = "https://github.com/AgentMindCloud/grok-install-ecosystem"
 
 [project.scripts]
