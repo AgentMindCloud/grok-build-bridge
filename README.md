@@ -1,76 +1,126 @@
-<!-- NEON / CYBERPUNK REPO TEMPLATE · GROK-BUILD-BRIDGE -->
+<!--
+╔══════════════════════════════════════════════════════════════════════════════╗
+║  SPECTRAL VISUAL IDENTITY · grok-build-bridge                                ║
+║  ────────────────────────────────────────────────────────────────────────    ║
+║  Palette   · Plasma #FF1E70  · Aurora #00E0D5  · Nebula #7C3AED              ║
+║  Surface   · Background #0A0A0A · Surface #12121A · Text #EAF8FF             ║
+║  Type      · Inter (display/body) · JetBrains Mono (code/terminal)           ║
+║  Texture   · Nebula circles · halftone dot lattice · chromatic aberration    ║
+╚══════════════════════════════════════════════════════════════════════════════╝
+-->
 
 <p align="center">
   <img
-    src="https://capsule-render.vercel.app/api?type=waving&height=230&color=0:00E5FF,50:7C3AED,100:FF4FD8&text=grok-build-bridge&fontSize=52&fontColor=EAF8FF&fontAlign=50&fontAlignY=38&desc=One%20YAML%20%E2%86%92%20Grok%20Builds%20It%20%E2%86%92%20Safely%20Live%20on%20X&descAlignY=62&descSize=17"
+    src="https://capsule-render.vercel.app/api?type=waving&height=240&color=0:FF1E70,50:7C3AED,100:00E0D5&text=grok-build-bridge&fontSize=54&fontColor=EAF8FF&fontAlign=50&fontAlignY=38&desc=One%20YAML%20%E2%86%92%20Grok%20Builds%20%E2%86%92%20Safely%20Live%20on%20X&descAlignY=62&descSize=17"
     width="100%"
-    alt="header"
+    alt="grok-build-bridge · Spectral identity"
   />
 </p>
 
-<h1 align="center">⚡ grok-build-bridge</h1>
+<h1 align="center">grok-build-bridge</h1>
 
 <p align="center">
-  <a href="https://pypi.org/project/grok-build-bridge/"><img src="https://img.shields.io/pypi/v/grok-build-bridge?style=for-the-badge&color=00E5FF&labelColor=0A0D14&logo=pypi&logoColor=FFFFFF" alt="PyPI" /></a>
-  <a href="https://github.com/AgentMindCloud/grok-build-bridge/releases"><img src="https://img.shields.io/github/v/release/AgentMindCloud/grok-build-bridge?style=for-the-badge&color=00D5FF&labelColor=0A0D14&logo=github&logoColor=FFFFFF" alt="GitHub Release" /></a>
-  <a href="https://github.com/AgentMindCloud/grok-build-bridge/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/AgentMindCloud/grok-build-bridge/ci.yml?style=for-the-badge&label=CI&labelColor=0A0D14&logo=githubactions&logoColor=FFFFFF" alt="CI" /></a>
-  <a href="https://www.python.org/downloads/"><img src="https://img.shields.io/badge/Python%203.10+-FF4FD8?style=for-the-badge&logo=python&logoColor=FFFFFF&labelColor=0A0D14" alt="Python 3.10+" /></a>
-  <a href="LICENSE"><img src="https://img.shields.io/badge/License-Apache%202.0-7C3AED?style=for-the-badge&logoColor=FFFFFF&labelColor=0A0D14" alt="License" /></a>
-  <a href="https://github.com/AgentMindCloud/grok-agent-orchestra"><img src="https://img.shields.io/badge/Lucas%20Certified-9D4EDD?style=for-the-badge&logoColor=FFFFFF&labelColor=0A0D14" alt="Lucas Certified" /></a>
+  <sub><b>· SPECTRAL · TIER&nbsp;4 · ULTRA-PREMIUM ·</b></sub>
+</p>
+
+<p align="center">
+  <a href="https://pypi.org/project/grok-build-bridge/"><img src="https://img.shields.io/pypi/v/grok-build-bridge?style=for-the-badge&color=00E0D5&labelColor=0A0A0A&logo=pypi&logoColor=FFFFFF" alt="PyPI" /></a>
+  <a href="https://github.com/AgentMindCloud/grok-build-bridge/releases"><img src="https://img.shields.io/github/v/release/AgentMindCloud/grok-build-bridge?style=for-the-badge&color=00E0D5&labelColor=0A0A0A&logo=github&logoColor=FFFFFF" alt="GitHub Release" /></a>
+  <a href="https://github.com/AgentMindCloud/grok-build-bridge/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/AgentMindCloud/grok-build-bridge/ci.yml?style=for-the-badge&label=CI&labelColor=0A0A0A&logo=githubactions&logoColor=FFFFFF" alt="CI" /></a>
+  <a href="https://www.python.org/downloads/"><img src="https://img.shields.io/badge/Python%203.10+-FF1E70?style=for-the-badge&logo=python&logoColor=FFFFFF&labelColor=0A0A0A" alt="Python 3.10+" /></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/License-Apache%202.0-7C3AED?style=for-the-badge&logoColor=FFFFFF&labelColor=0A0A0A" alt="License" /></a>
+  <a href="https://github.com/AgentMindCloud/grok-agent-orchestra"><img src="https://img.shields.io/badge/Lucas%20Certified-9D4EDD?style=for-the-badge&logoColor=FFFFFF&labelColor=0A0A0A" alt="Lucas Certified" /></a>
 </p>
 
 <p align="center">
   <b>The last mile from "Grok generated my code" to "agent is live on X posting every 6 hours."</b><br/>
-  One YAML. Codegen. Safety audit. Deploy. Zero glue.
+  <em>One YAML · Codegen · Safety audit · Deploy · Multi-agent runtime · Zero glue.</em>
 </p>
 
 <p align="center">
-  <img src="https://readme-typing-svg.demolab.com?font=Space+Grotesk&weight=700&size=22&pause=1000&color=00E5FF&center=true&vCenter=true&width=900&lines=Grok+4.20+Generates+the+Agent+from+YAML;Two-Layer+Safety+%E2%80%94+Static+%2B+Grok+Audit;Deploy+to+X+%C2%B7+Vercel+%C2%B7+Render+%C2%B7+Railway+%C2%B7+Fly.io+%C2%B7+Local;Lucas+Veto+Hook+%E2%80%94+Orchestra+Ready" alt="typing" />
+  <img src="https://readme-typing-svg.demolab.com?font=Inter&weight=700&size=22&pause=1000&color=00E0D5&center=true&vCenter=true&width=920&lines=Grok+4.20+Generates+the+Agent+from+YAML;Two-Layer+Safety+%E2%80%94+Static+%2B+Grok+Audit;Deploy+to+X+%C2%B7+Vercel+%C2%B7+Render+%C2%B7+Railway+%C2%B7+Fly.io+%C2%B7+Local;Multi-Agent+Runtime+%E2%80%94+Orchestra+%2B+Lucas+Veto+Built-In" alt="grok-build-bridge typing animation" />
 </p>
 
 <p align="center">
-  <a href="https://pypi.org/project/grok-build-bridge/"><img src="https://img.shields.io/pypi/pyversions/grok-build-bridge?style=for-the-badge&color=FF4FD8&labelColor=0A0D14&logo=python&logoColor=FFFFFF" alt="Python versions" /></a>
-  <a href="https://pypi.org/project/grok-build-bridge/"><img src="https://img.shields.io/pypi/dm/grok-build-bridge?style=for-the-badge&color=00E5FF&labelColor=0A0D14&logo=pypi&logoColor=FFFFFF" alt="Downloads" /></a>
-  <a href="https://pypi.org/project/grok-build-bridge/"><img src="https://img.shields.io/pypi/l/grok-build-bridge?style=for-the-badge&color=7C3AED&labelColor=0A0D14" alt="License" /></a>
-  <a href="https://x.ai"><img src="https://img.shields.io/badge/Grok%204.20-00D5FF?style=for-the-badge&logoColor=001018&labelColor=0A0D14" /></a>
-  <a href="https://x.ai"><img src="https://img.shields.io/badge/xAI%20Aligned-9D4EDD?style=for-the-badge&logoColor=FFFFFF&labelColor=0A0D14" /></a>
-  <img src="https://img.shields.io/badge/Coverage%2085%25-5EF2FF?style=for-the-badge&logoColor=001018&labelColor=0A0D14" />
+  <a href="https://pypi.org/project/grok-build-bridge/"><img src="https://img.shields.io/pypi/pyversions/grok-build-bridge?style=for-the-badge&color=FF1E70&labelColor=0A0A0A&logo=python&logoColor=FFFFFF" alt="Python versions" /></a>
+  <a href="https://pypi.org/project/grok-build-bridge/"><img src="https://img.shields.io/pypi/dm/grok-build-bridge?style=for-the-badge&color=00E0D5&labelColor=0A0A0A&logo=pypi&logoColor=FFFFFF" alt="Downloads" /></a>
+  <a href="https://pypi.org/project/grok-build-bridge/"><img src="https://img.shields.io/pypi/l/grok-build-bridge?style=for-the-badge&color=7C3AED&labelColor=0A0A0A" alt="License" /></a>
+  <a href="https://x.ai"><img src="https://img.shields.io/badge/Grok%204.20-00E0D5?style=for-the-badge&logoColor=0A0A0A&labelColor=0A0A0A" /></a>
+  <a href="https://x.ai"><img src="https://img.shields.io/badge/xAI%20Aligned-9D4EDD?style=for-the-badge&logoColor=FFFFFF&labelColor=0A0A0A" /></a>
+  <img src="https://img.shields.io/badge/Coverage%2085%25-00E0D5?style=for-the-badge&logoColor=0A0A0A&labelColor=0A0A0A" />
 </p>
 
 <p align="center">
 
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 300" width="720">
-  <rect width="720" height="300" fill="#0A0D14" rx="10"/>
-  <rect width="720" height="32" fill="#0F1420" rx="10"/>
-  <rect y="24" width="720" height="8" fill="#0F1420"/>
-  <circle cx="16" cy="16" r="5" fill="#FF5F56"/>
-  <circle cx="36" cy="16" r="5" fill="#FFBD2E"/>
-  <circle cx="56" cy="16" r="5" fill="#27C93F"/>
-  <text x="320" y="21" fill="#8899A6" font-family="monospace" font-size="12">zsh · grok-build-bridge</text>
-  <text x="24" y="70" fill="#00E5FF" font-family="monospace" font-size="14">$</text>
-  <text x="44" y="70" fill="#EAF8FF" font-family="monospace" font-size="14">grok-build-bridge run bridge.yaml</text>
-  <line x1="24" y1="86" x2="696" y2="86" stroke="#556677" stroke-opacity="0.3"/>
-  <text x="24" y="112" fill="#00E5FF" font-family="monospace" font-size="12" font-weight="700">▸ phase 1</text>
-  <text x="108" y="112" fill="#EAF8FF" font-family="monospace" font-size="12">parse · validate YAML</text>
-  <text x="640" y="112" fill="#27C93F" font-family="monospace" font-size="11" font-weight="700">✓ 0.02s</text>
-  <text x="24" y="136" fill="#7C3AED" font-family="monospace" font-size="12" font-weight="700">▸ phase 2</text>
-  <text x="108" y="136" fill="#EAF8FF" font-family="monospace" font-size="12">generate · grok-4.20-0309</text>
-  <rect x="380" y="126" width="180" height="12" fill="#12161F" stroke="#7C3AED" stroke-opacity="0.4" rx="2"/>
-  <rect x="380" y="126" width="180" height="12" fill="#7C3AED" fill-opacity="0.5"><animate attributeName="width" values="0;180" dur="2s" repeatCount="indefinite"/></rect>
-  <text x="640" y="136" fill="#7C3AED" font-family="monospace" font-size="11" font-weight="700">17.4k tok</text>
-  <text x="24" y="160" fill="#FF4FD8" font-family="monospace" font-size="12" font-weight="700">▸ phase 3</text>
-  <text x="108" y="160" fill="#EAF8FF" font-family="monospace" font-size="12">safety scan · static + grok audit</text>
-  <text x="640" y="160" fill="#27C93F" font-family="monospace" font-size="11" font-weight="700">✓ SAFE</text>
-  <text x="24" y="184" fill="#00D5FF" font-family="monospace" font-size="12" font-weight="700">▸ phase 4</text>
-  <text x="108" y="184" fill="#EAF8FF" font-family="monospace" font-size="12">deploy · target=x · schedule=0 */6 * * *</text>
-  <text x="640" y="184" fill="#27C93F" font-family="monospace" font-size="11" font-weight="700">✓ LIVE</text>
-  <text x="24" y="208" fill="#5EF2FF" font-family="monospace" font-size="12" font-weight="700">▸ phase 5</text>
-  <text x="108" y="208" fill="#EAF8FF" font-family="monospace" font-size="12">BridgeResult</text>
-  <text x="640" y="208" fill="#27C93F" font-family="monospace" font-size="11" font-weight="700">✓ 42.7s</text>
-  <line x1="24" y1="228" x2="696" y2="228" stroke="#556677" stroke-opacity="0.3"/>
-  <rect x="24" y="244" width="672" height="40" fill="#27C93F" fill-opacity="0.1" stroke="#27C93F" stroke-opacity="0.5" rx="4"/>
-  <text x="40" y="269" fill="#27C93F" font-family="monospace" font-size="13" font-weight="700">✅ BRIDGE COMPLETE</text>
-  <text x="220" y="269" fill="#EAF8FF" font-family="monospace" font-size="11">x-trend-analyzer · deployed to X · audit = passed · tokens = 17,412</text>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 320" width="720" role="img" aria-label="grok-build-bridge run bridge.yaml — Spectral five-phase pipeline">
+  <defs>
+    <radialGradient id="nebPlasma" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#FF1E70" stop-opacity="0.42"/>
+      <stop offset="100%" stop-color="#FF1E70" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="nebAurora" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#00E0D5" stop-opacity="0.40"/>
+      <stop offset="100%" stop-color="#00E0D5" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="nebViolet" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#7C3AED" stop-opacity="0.36"/>
+      <stop offset="100%" stop-color="#7C3AED" stop-opacity="0"/>
+    </radialGradient>
+    <pattern id="halftone" width="6" height="6" patternUnits="userSpaceOnUse">
+      <circle cx="3" cy="3" r="0.6" fill="#EAF8FF" fill-opacity="0.05"/>
+    </pattern>
+    <linearGradient id="resultGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#FF1E70" stop-opacity="0.18"/>
+      <stop offset="100%" stop-color="#00E0D5" stop-opacity="0.18"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="720" height="320" fill="#0A0A0A" rx="12"/>
+  <rect width="720" height="320" fill="url(#halftone)" rx="12"/>
+  <circle cx="80"  cy="40"  r="120" fill="url(#nebPlasma)"/>
+  <circle cx="660" cy="280" r="140" fill="url(#nebAurora)"/>
+  <circle cx="380" cy="160" r="200" fill="url(#nebViolet)"/>
+
+  <rect width="720" height="36" fill="#12121A" rx="12"/>
+  <rect y="28" width="720" height="8" fill="#12121A"/>
+  <circle cx="18" cy="18" r="5" fill="#FF1E70"/>
+  <circle cx="38" cy="18" r="5" fill="#FFBD2E"/>
+  <circle cx="58" cy="18" r="5" fill="#00E0D5"/>
+  <text x="360" y="23" fill="#8899A6" font-family="'Inter', system-ui, sans-serif" font-size="12" text-anchor="middle" letter-spacing="0.6">zsh · grok-build-bridge</text>
+
+  <text x="24"  y="76" fill="#00E0D5" font-family="'JetBrains Mono', ui-monospace, monospace" font-size="14" font-weight="700">$</text>
+  <text x="44"  y="76" fill="#EAF8FF" font-family="'JetBrains Mono', ui-monospace, monospace" font-size="14">grok-build-bridge run bridge.yaml</text>
+  <line x1="24" y1="94" x2="696" y2="94" stroke="#7C3AED" stroke-opacity="0.28"/>
+
+  <text x="24"  y="120" fill="#00E0D5" font-family="'JetBrains Mono', ui-monospace, monospace" font-size="12" font-weight="700">▸ phase 1</text>
+  <text x="108" y="120" fill="#EAF8FF" font-family="'JetBrains Mono', ui-monospace, monospace" font-size="12">parse · validate YAML</text>
+  <text x="640" y="120" fill="#27C93F" font-family="'JetBrains Mono', ui-monospace, monospace" font-size="11" font-weight="700">✓ 0.02s</text>
+
+  <text x="24"  y="146" fill="#7C3AED" font-family="'JetBrains Mono', ui-monospace, monospace" font-size="12" font-weight="700">▸ phase 2</text>
+  <text x="108" y="146" fill="#EAF8FF" font-family="'JetBrains Mono', ui-monospace, monospace" font-size="12">generate · grok-4.20-0309</text>
+  <rect x="380" y="136" width="180" height="12" fill="#12121A" stroke="#7C3AED" stroke-opacity="0.5" rx="2"/>
+  <rect x="380" y="136" width="180" height="12" fill="#7C3AED" fill-opacity="0.55" rx="2">
+    <animate attributeName="width" values="0;180" dur="2s" repeatCount="indefinite"/>
+  </rect>
+  <text x="640" y="146" fill="#7C3AED" font-family="'JetBrains Mono', ui-monospace, monospace" font-size="11" font-weight="700">17.4k tok</text>
+
+  <text x="24"  y="172" fill="#FF1E70" font-family="'JetBrains Mono', ui-monospace, monospace" font-size="12" font-weight="700">▸ phase 3</text>
+  <text x="108" y="172" fill="#EAF8FF" font-family="'JetBrains Mono', ui-monospace, monospace" font-size="12">safety scan · static + grok audit</text>
+  <text x="640" y="172" fill="#27C93F" font-family="'JetBrains Mono', ui-monospace, monospace" font-size="11" font-weight="700">✓ SAFE</text>
+
+  <text x="24"  y="198" fill="#00E0D5" font-family="'JetBrains Mono', ui-monospace, monospace" font-size="12" font-weight="700">▸ phase 4</text>
+  <text x="108" y="198" fill="#EAF8FF" font-family="'JetBrains Mono', ui-monospace, monospace" font-size="12">deploy · target=x · schedule=0 */6 * * *</text>
+  <text x="640" y="198" fill="#27C93F" font-family="'JetBrains Mono', ui-monospace, monospace" font-size="11" font-weight="700">✓ LIVE</text>
+
+  <text x="24"  y="224" fill="#FF1E70" font-family="'JetBrains Mono', ui-monospace, monospace" font-size="12" font-weight="700">▸ phase 5</text>
+  <text x="108" y="224" fill="#EAF8FF" font-family="'JetBrains Mono', ui-monospace, monospace" font-size="12">BridgeResult · manifest · receipts</text>
+  <text x="640" y="224" fill="#27C93F" font-family="'JetBrains Mono', ui-monospace, monospace" font-size="11" font-weight="700">✓ 42.7s</text>
+
+  <line x1="24" y1="248" x2="696" y2="248" stroke="#7C3AED" stroke-opacity="0.28"/>
+
+  <rect x="24" y="266" width="672" height="40" fill="url(#resultGrad)" stroke="#00E0D5" stroke-opacity="0.55" rx="6"/>
+  <text x="40"  y="291" fill="#00E0D5" font-family="'JetBrains Mono', ui-monospace, monospace" font-size="13" font-weight="700">✦ BRIDGE COMPLETE</text>
+  <text x="222" y="291" fill="#EAF8FF" font-family="'JetBrains Mono', ui-monospace, monospace" font-size="11">x-trend-analyzer · deployed to X · audit = passed · tokens = 17,412</text>
 </svg>
 
 </p>
@@ -81,6 +131,69 @@
   <a href="#-safety"><b>🛡️ Safety</b></a> ·
   <a href="#-roadmap"><b>🗺️ Roadmap</b></a>
 </p>
+
+---
+
+## ✦ Now with Built-in Multi-Agent Runtime <sub>(Orchestra)</sub>
+
+<table>
+  <tr>
+    <td width="55%" valign="top">
+      <p>
+        <img src="https://img.shields.io/badge/NEW-FF1E70?style=for-the-badge&labelColor=0A0A0A" alt="NEW" />
+        <img src="https://img.shields.io/badge/Multi--Agent%20Runtime-00E0D5?style=for-the-badge&labelColor=0A0A0A" alt="Multi-Agent Runtime" />
+        <img src="https://img.shields.io/badge/Lucas%20Veto-7C3AED?style=for-the-badge&labelColor=0A0A0A" alt="Lucas Veto" />
+      </p>
+      <p>
+        <b>Bridge now ships with the Orchestra runtime baked in.</b>
+        Multi-agent debate, dissent capture, and the named <b>Lucas veto</b> live <em>inside</em>
+        the same pipeline that builds and deploys your agent — not as a separate service to wire up.
+      </p>
+      <p>
+        Flip <code>safety.lucas_veto_enabled: true</code> in any <code>bridge.yaml</code> and a
+        Plasma-tier reviewer sits <em>in front of</em> the static + Grok safety scan. Two
+        reviewers. Two failure modes. One durable contract — auditable end-to-end.
+      </p>
+      <p>
+        <b>Combined product surface:</b> <code>bridge run</code> · <code>bridge link</code> ·
+        <code>bridge dev</code> · <code>orchestra debate</code> · <code>orchestra combined</code>.
+      </p>
+    </td>
+    <td width="45%" valign="top">
+
+```yaml
+# bridge.yaml — Orchestra integration is one line
+safety:
+  audit_before_post: true
+  lucas_veto_enabled: true   # ← multi-agent veto
+  max_tokens_per_run: 18000
+```
+
+```bash
+# Same agent, two-stage review pipeline
+grok-build-bridge run bridge.yaml
+# ▸ phase 3a · orchestra · debate
+# ▸ phase 3b · orchestra · lucas veto
+# ▸ phase 3c · static + grok audit
+# ✦ BRIDGE COMPLETE — verdict signed by 2 reviewers
+```
+   </td>
+  </tr>
+</table>
+
+<p align="center">
+  <img src="https://img.shields.io/badge/Composable-FF1E70?style=for-the-badge&labelColor=0A0A0A" />
+  <img src="https://img.shields.io/badge/Auditable-7C3AED?style=for-the-badge&labelColor=0A0A0A" />
+  <img src="https://img.shields.io/badge/Reproducible-00E0D5?style=for-the-badge&labelColor=0A0A0A" />
+  <img src="https://img.shields.io/badge/Fail--Closed-EAF8FF?style=for-the-badge&labelColor=0A0A0A" />
+</p>
+
+> **Why this matters:** before this merge, wiring a Lucas veto into a deploy gate took
+> bespoke glue per project — fragile, undocumented, hard to audit. Now it's one YAML key.
+> The Orchestra debate transcript and the Bridge safety report end up in the same
+> `bridge.manifest.json`, signed and reproducible.
+
+Read more: [`docs/build-bridge.md`](docs/build-bridge.md) · [`grok-agent-orchestra`](https://github.com/AgentMindCloud/grok-agent-orchestra) (upstream lineage).
 
 ---
 
@@ -209,12 +322,12 @@ flowchart LR
 
 ```mermaid
 flowchart LR
-    classDef parse  fill:#00E5FF,stroke:#0A0D14,color:#0A0D14,font-weight:bold
-    classDef gen    fill:#7C3AED,stroke:#0A0D14,color:#FFFFFF,font-weight:bold
-    classDef safety fill:#FF4FD8,stroke:#0A0D14,color:#FFFFFF,font-weight:bold
-    classDef deploy fill:#00D5FF,stroke:#0A0D14,color:#0A0D14,font-weight:bold
-    classDef result fill:#27C93F,stroke:#0A0D14,color:#0A0D14,font-weight:bold
-    classDef block  fill:#FF5F56,stroke:#0A0D14,color:#FFFFFF,font-weight:bold
+    classDef parse  fill:#00E0D5,stroke:#0A0A0A,color:#0A0A0A,font-weight:bold
+    classDef gen    fill:#7C3AED,stroke:#0A0A0A,color:#FFFFFF,font-weight:bold
+    classDef safety fill:#FF1E70,stroke:#0A0A0A,color:#FFFFFF,font-weight:bold
+    classDef deploy fill:#00E0D5,stroke:#0A0A0A,color:#0A0A0A,font-weight:bold
+    classDef result fill:#27C93F,stroke:#0A0A0A,color:#0A0A0A,font-weight:bold
+    classDef block  fill:#FF5F56,stroke:#0A0A0A,color:#FFFFFF,font-weight:bold
 
     Y([📥 bridge.yaml]) --> A
     A["📄 Phase 1 · Parse<br/>schema validate · defaults · freeze"]:::parse --> B
@@ -327,12 +440,12 @@ Inputs, outputs, and a copy-pasteable starter workflow: [`.github/actions/bridge
 ## ✦ Deploy Targets
 
 <p align="center">
-  <img src="https://img.shields.io/badge/target%3A%20x-00E5FF?style=for-the-badge&logo=x&logoColor=001018&labelColor=0A0D14" />
-  <img src="https://img.shields.io/badge/target%3A%20vercel-7C3AED?style=for-the-badge&logo=vercel&logoColor=FFFFFF&labelColor=0A0D14" />
-  <img src="https://img.shields.io/badge/target%3A%20render-FF4FD8?style=for-the-badge&logoColor=FFFFFF&labelColor=0A0D14" />
-  <img src="https://img.shields.io/badge/target%3A%20railway-9D4EDD?style=for-the-badge&logo=railway&logoColor=FFFFFF&labelColor=0A0D14" />
-  <img src="https://img.shields.io/badge/target%3A%20flyio-5EF2FF?style=for-the-badge&logoColor=001018&labelColor=0A0D14" />
-  <img src="https://img.shields.io/badge/target%3A%20local-00D5FF?style=for-the-badge&logoColor=001018&labelColor=0A0D14" />
+  <img src="https://img.shields.io/badge/target%3A%20x-00E0D5?style=for-the-badge&logo=x&logoColor=0A0A0A&labelColor=0A0A0A" />
+  <img src="https://img.shields.io/badge/target%3A%20vercel-7C3AED?style=for-the-badge&logo=vercel&logoColor=FFFFFF&labelColor=0A0A0A" />
+  <img src="https://img.shields.io/badge/target%3A%20render-FF1E70?style=for-the-badge&logoColor=FFFFFF&labelColor=0A0A0A" />
+  <img src="https://img.shields.io/badge/target%3A%20railway-9D4EDD?style=for-the-badge&logo=railway&logoColor=FFFFFF&labelColor=0A0A0A" />
+  <img src="https://img.shields.io/badge/target%3A%20flyio-00E0D5?style=for-the-badge&logoColor=0A0A0A&labelColor=0A0A0A" />
+  <img src="https://img.shields.io/badge/target%3A%20local-00E0D5?style=for-the-badge&logoColor=0A0A0A&labelColor=0A0A0A" />
 </p>
 
 Six first-class targets. All use the same pipeline (parse → generate → safety → deploy); the only thing that changes is the last hop.
@@ -392,8 +505,8 @@ Source + Dockerfile + one-liner deploy steps for Fly.io / Render / Railway / Ver
 ## ✦ Publish to Marketplace <span style="font-weight:400">_(preview)_</span>
 
 <p align="center">
-  <a href="https://grokagents.dev"><img src="https://img.shields.io/badge/grokagents.dev-coming%20soon-9D4EDD?style=for-the-badge&logoColor=FFFFFF&labelColor=0A0D14" alt="grokagents.dev coming soon" /></a>
-  <img src="https://img.shields.io/badge/manifest%20schema-v1.0-00E5FF?style=for-the-badge&logoColor=001018&labelColor=0A0D14" />
+  <a href="https://grokagents.dev"><img src="https://img.shields.io/badge/grokagents.dev-coming%20soon-9D4EDD?style=for-the-badge&logoColor=FFFFFF&labelColor=0A0A0A" alt="grokagents.dev coming soon" /></a>
+  <img src="https://img.shields.io/badge/manifest%20schema-v1.0-00E0D5?style=for-the-badge&logoColor=0A0A0A&labelColor=0A0A0A" />
 </p>
 
 The agent registry at [grokagents.dev](https://grokagents.dev) is not live yet — but the **packaging contract is**. `grok-build-bridge publish` produces a forward-compatible zip + manifest today; once the registry ships, those packages upload as-is. No re-export, no migration.
@@ -558,13 +671,13 @@ ruff check . && ruff format --check . && mypy grok_build_bridge && pytest
 
 <p align="center">
   <a href="https://github.com/AgentMindCloud">
-    <img src="https://img.shields.io/badge/GitHub-00E5FF?style=for-the-badge&logo=github&logoColor=001018&labelColor=0A0D14" />
+    <img src="https://img.shields.io/badge/GitHub-00E0D5?style=for-the-badge&logo=github&logoColor=0A0A0A&labelColor=0A0A0A" />
   </a>
   <a href="https://x.com/JanSol0s">
-    <img src="https://img.shields.io/badge/X-7C3AED?style=for-the-badge&logo=x&logoColor=FFFFFF&labelColor=0A0D14" />
+    <img src="https://img.shields.io/badge/X-7C3AED?style=for-the-badge&logo=x&logoColor=FFFFFF&labelColor=0A0A0A" />
   </a>
   <a href="https://grokagents.dev">
-    <img src="https://img.shields.io/badge/grokagents.dev-FF4FD8?style=for-the-badge&logoColor=FFFFFF&labelColor=0A0D14" />
+    <img src="https://img.shields.io/badge/grokagents.dev-FF1E70?style=for-the-badge&logoColor=FFFFFF&labelColor=0A0A0A" />
   </a>
 </p>
 
@@ -586,6 +699,55 @@ Apache 2.0 — see [`LICENSE`](LICENSE). Copyright © 2026 Jan Solo / AgentMindC
 - 💬 **Discord** — _coming soon._ Announcements via [@JanSol0s](https://x.com/JanSol0s) until the server opens.
 - 🐦 **[X / @JanSol0s](https://x.com/JanSol0s)** — release notes, demos, support.
 
+---
+
+## ✦ Visual Language <sub>· Spectral · Tier 4</sub>
+
+<table>
+  <tr>
+    <td width="55%" valign="top">
+      <p>
+        <b>Spectral</b> is the visual identity that ties grok-build-bridge,
+        grok-agent-orchestra, and the wider AgentMindCloud surface into one product family.
+        Every README, OG image, marketplace card, and CLI panel pulls from this palette and type stack.
+      </p>
+      <p>
+        <b>Palette.</b>
+        <code>Plasma #FF1E70</code> for energy and emphasis ·
+        <code>Aurora #00E0D5</code> for clarity and verdicts ·
+        <code>Nebula #7C3AED</code> for depth and reasoning ·
+        on a <code>#0A0A0A</code> background with <code>#EAF8FF</code> cool-white text.
+      </p>
+      <p>
+        <b>Type.</b>
+        <code>Inter</code> for display and body — geometric, calm, infinitely legible.
+        <code>JetBrains Mono</code> for code, terminal frames, and CLI receipts —
+        wide letterforms that read at any size.
+      </p>
+      <p>
+        <b>Texture.</b>
+        Soft <em>nebula circles</em> behind hero panels.
+        A subtle <em>halftone dot lattice</em> over deep surfaces.
+        A two-channel <em>chromatic aberration</em> (Plasma-left, Aurora-right) on display headlines.
+        Used sparingly — never decorative for its own sake.
+      </p>
+    </td>
+    <td width="45%" valign="top" align="center">
+      <p>
+        <img src="https://img.shields.io/badge/Plasma-FF1E70?style=for-the-badge&label=%23FF1E70&labelColor=0A0A0A" alt="Plasma swatch" /><br/>
+        <img src="https://img.shields.io/badge/Aurora-00E0D5?style=for-the-badge&label=%2300E0D5&labelColor=0A0A0A" alt="Aurora swatch" /><br/>
+        <img src="https://img.shields.io/badge/Nebula-7C3AED?style=for-the-badge&label=%237C3AED&labelColor=0A0A0A" alt="Nebula swatch" /><br/>
+        <img src="https://img.shields.io/badge/Background-0A0A0A?style=for-the-badge&label=%230A0A0A&labelColor=0A0A0A" alt="Background swatch" /><br/>
+        <img src="https://img.shields.io/badge/Text-EAF8FF?style=for-the-badge&label=%23EAF8FF&labelColor=0A0A0A" alt="Text swatch" />
+      </p>
+      <p>
+        <img src="https://img.shields.io/badge/Inter-display%20%2F%20body-EAF8FF?style=for-the-badge&labelColor=0A0A0A" alt="Inter font" />
+        <img src="https://img.shields.io/badge/JetBrains%20Mono-code%20%2F%20terminal-00E0D5?style=for-the-badge&labelColor=0A0A0A" alt="JetBrains Mono font" />
+      </p>
+    </td>
+  </tr>
+</table>
+
 <p align="center">
-  <img src="https://capsule-render.vercel.app/api?type=waving&height=120&section=footer&color=0:00E5FF,50:7C3AED,100:FF4FD8" width="100%" />
+  <img src="https://capsule-render.vercel.app/api?type=waving&height=120&section=footer&color=0:FF1E70,50:7C3AED,100:00E0D5" width="100%" alt="Spectral footer" />
 </p>
