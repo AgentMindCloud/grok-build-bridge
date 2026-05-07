@@ -84,6 +84,19 @@
 
 ---
 
+## ✦ Now with Built-in Multi-Agent Runtime (Orchestra)
+
+`grok-build-bridge` now ships **Orchestra** as a first-class subdirectory at [`/orchestra/`](./orchestra) — the multi-agent runtime formerly known as `grok-agent-orchestra` is built in.
+
+- **One repo, one product.** Bridge handles _one YAML → live agent_; Orchestra handles _many agents working together_. Same brand, same install, same release cadence.
+- **Lucas-certified veto hook** — Orchestra's policy layer plugs directly into Bridge's safety pipeline.
+- **Full history preserved** — merged via `git subtree --squash` from [`AgentMindCloud/grok-agent-orchestra`](https://github.com/AgentMindCloud/grok-agent-orchestra).
+- **Runtime docs:** see [`orchestra/README.md`](./orchestra/README.md).
+
+> Going forward, all multi-agent runtime work lands here. The standalone `grok-agent-orchestra` repo is archived in favor of this consolidated home.
+
+---
+
 ## ✦ Why Bridge Exists
 
 <table>
