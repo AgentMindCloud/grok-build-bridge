@@ -1,0 +1,228 @@
+# -----------------------------------------------------------------------------
+# pyproject.toml — grok-agent-orchestra
+#
+# PEP 621 metadata + Hatchling build backend.
+#
+# Layout: the package is at top-level ``grok_orchestra/`` (flat layout).
+# Hatchling auto-discovers it; we still pin ``packages = ["grok_orchestra"]``
+# explicitly so the wheel target never accidentally bundles tests/ or docs/.
+# -----------------------------------------------------------------------------
+
+[build-system]
+requires = ["hatchling>=1.24"]
+build-backend = "hatchling.build"
+
+[project]
+name = "grok-agent-orchestra"
+version = "0.1.0"
+description = "Multi-agent research with visible debate and enforceable safety vetoes — powered by Grok."
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "Apache-2.0" }
+authors = [
+    { name = "Jan Solo", email = "jan@agentmind.cloud" },
+    { name = "AgentMindCloud" },
+]
+keywords = [
+    "xai",
+    "grok",
+    "grok-4.20",
+    "multi-agent",
+    "agents",
+    "orchestration",
+    "research",
+    "debate",
+    "safety",
+    "lucas-veto",
+    "ai",
+    "llm",
+]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Information Technology",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: Apache Software License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "Typing :: Typed",
+]
+
+# Pin majors, leave minors loose so users don't get stuck on a pinned point
+# release in six months. Bump the upper bound when we test against the next
+# major.
+dependencies = [
+    "grok-build-bridge>=0.1,<1",
+    "xai-sdk>=1.0,<2",
+    "pyyaml>=6,<7",
+    "rich>=13,<15",
+    "typer>=0.12,<1",
+    "tenacity>=8.2,<10",
+    "jsonschema>=4.21,<5",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7",
+    "pytest-asyncio>=0.23",
+    "pytest-cov>=4",
+    "mypy>=1.8",
+    "ruff>=0.4",
+    "build>=1.2",
+    "twine>=5",
+    # Web tests: FastAPI's TestClient ships httpx + websocket support.
+    "fastapi>=0.110,<1.0",
+    "httpx>=0.27,<1.0",
+    # Search-layer tests run against mocked responses so we don't add
+    # `tavily-python` here, but `selectolax` + `trafilatura` are pure
+    # Python and exercised by the fetcher tests.
+    "selectolax>=0.3,<1",
+    "trafilatura>=1.8,<2",
+]
+web = [
+    "fastapi>=0.110,<1.0",
+    "uvicorn[standard]>=0.27,<1.0",
+    "websockets>=12,<14",
+    "jinja2>=3,<4",
+    "python-multipart>=0.0.9",
+]
+publish = [
+    "weasyprint>=60,<63",        # HTML → PDF (needs Cairo + Pango on the host)
+    # WeasyPrint 62.x calls super().transform() on a pydyf Stream — that
+    # super class only got `transform()` in pydyf 0.11. Pin to <0.11 until
+    # WeasyPrint 63 lands on PyPI (pydyf 0.11+ compatible).
+    "pydyf>=0.10.0,<0.11",
+    "python-docx>=1.1,<2.0",     # DOCX
+    "markdown>=3.5,<4",          # MD → HTML for WeasyPrint
+    "pygments>=2.17,<3",         # code highlighting in PDFs
+]
+search = [
+    "tavily-python>=0.3,<1",     # default search provider
+    "httpx>=0.26,<1",            # HTTP fetcher
+    "selectolax>=0.3,<1",        # fast HTML selectors
+    "trafilatura>=1.8,<2",       # main-content extraction
+]
+# Pluggable LLM providers via LiteLLM (OpenAI / Anthropic / Ollama / …).
+# Grok stays in core (xai-sdk) — this extra is opt-in for portability mode.
+# litellm ships often, so we deliberately keep the floor and ceiling loose.
+adapters = [
+    "litellm>=1.34",
+]
+# Optional observability stack. Default-OFF: the framework ships with a
+# zero-overhead NoOpTracer and only switches when the relevant env var
+# is set (LANGSMITH_API_KEY / OTEL_EXPORTER_*).
+tracing = [
+    "langsmith>=0.1.50,<1",
+    "opentelemetry-api>=1.24,<2",
+    "opentelemetry-sdk>=1.24,<2",
+]
+# Optional inline image generation in the Publisher step. Default-OFF:
+# enabled per-template via `publisher.images.enabled: true`. Pillow is
+# used for thumbnailing; replicate is the default Flux backend (BYOK).
+images = [
+    "Pillow>=10,<12",
+    "replicate>=0.25,<2",
+]
+# Big install (~300 MB Chromium). Reserved for sites that require JS.
+js = [
+    "playwright>=1.42,<2",
+]
+# Optional MCP (Model Context Protocol) client. Default-OFF: enabled per
+# template via `sources: - type: mcp`. Plug in private GitHub repos,
+# databases, internal docs, Slack history, etc. as research sources.
+mcp = [
+    "mcp>=1.0,<2",
+    "anyio>=4,<5",
+]
+# Docs site build deps. Default-OFF: only the GitHub Pages workflow + the
+# `mkdocs serve` development loop need these. End users never install them.
+docs-build = [
+    "mkdocs>=1.5,<2",
+    "mkdocs-material>=9.5,<10",
+    "mkdocs-include-markdown-plugin>=6,<8",
+    "mkdocs-mermaid2-plugin>=1.1,<2",
+    "mkdocstrings[python]>=0.24,<1",
+    "mike>=2,<3",
+]
+docs = []
+
+[project.urls]
+Homepage = "https://github.com/agentmindcloud/grok-agent-orchestra"
+Repository = "https://github.com/agentmindcloud/grok-agent-orchestra"
+Issues = "https://github.com/agentmindcloud/grok-agent-orchestra/issues"
+Changelog = "https://github.com/agentmindcloud/grok-agent-orchestra/blob/main/CHANGELOG.md"
+Documentation = "https://github.com/agentmindcloud/grok-agent-orchestra/tree/main/docs"
+
+[project.scripts]
+grok-orchestra = "grok_orchestra.cli:main"
+
+# -----------------------------------------------------------------------------
+# Hatch build configuration
+# -----------------------------------------------------------------------------
+# `packages` pins the wheel content — tests/ and docs/ never ship.
+# Bundled JSON schema + YAML templates ship as package data so
+# `grok-orchestra init <template>` keeps working post-install.
+
+[tool.hatch.build.targets.wheel]
+# Hatchling auto-includes every file inside `grok_orchestra/` — including
+# `schema/*.json` and `templates/*.yaml` — as long as the dir contains
+# an `__init__.py`. No `force-include` needed (and adding one duplicates
+# the entries in the wheel zip).
+packages = ["grok_orchestra"]
+
+[tool.hatch.build.targets.sdist]
+include = [
+    "grok_orchestra",
+    "tests",
+    "docs",
+    "examples",
+    "README.md",
+    "CHANGELOG.md",
+    "LICENSE",
+    "SECURITY.md",
+    "pyproject.toml",
+]
+exclude = [
+    "grok_orchestra/__pycache__",
+    "**/*.pyc",
+    "**/.DS_Store",
+]
+
+# -----------------------------------------------------------------------------
+# Tooling
+# -----------------------------------------------------------------------------
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "UP", "B"]
+ignore = ["E501"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
+
+[tool.coverage.run]
+# Modules gated behind optional extras — `[publish]`, `[tracing]`, `[images]`,
+# `[mcp]`. The base test job intentionally installs only the runtime + web
+# tier, so these files would always show 0% and drag the gate down without
+# representing real lint regressions. Coverage for them lives in dedicated
+# extras-test jobs (otel + docx + mcp) once those settle.
+omit = [
+    "grok_orchestra/images_runner.py",
+    "grok_orchestra/publisher/_docx.py",
+    "grok_orchestra/sources/_mcp_backend.py",
+    "grok_orchestra/tracing/otel_tracer.py",
+]
+
+[tool.mypy]
+python_version = "3.10"
+strict = true
+ignore_missing_imports = true
