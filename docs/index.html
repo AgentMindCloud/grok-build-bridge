@@ -129,7 +129,6 @@
   <!-- =====================================================================
        Section anchors are added incrementally in subsequent steps:
          #top         (header + hero)
-         #status      (live status dashboard)
          #templates   (featured templates carousel)
          #how         (5-phase mini flow)
          #orchestra   (Orchestra integration)
@@ -147,7 +146,6 @@
         <span class="hidden sm:inline rounded-md border border-white/10 px-1.5 py-0.5 text-[10px] uppercase tracking-wider text-zinc-400 font-mono">v0.1.0</span>
       </a>
       <div class="hidden md:flex items-center gap-8 text-sm text-zinc-400">
-        <a href="#status"    class="hover:text-neon-cyan transition-colors">Status</a>
         <a href="#templates" class="hover:text-neon-cyan transition-colors">Templates</a>
         <a href="#how"       class="hover:text-neon-cyan transition-colors">How it works</a>
         <a href="#orchestra" class="hover:text-neon-cyan transition-colors">Orchestra</a>
@@ -170,7 +168,6 @@
     <!-- Mobile menu panel -->
     <div id="mobile-menu" data-mobile-menu class="md:hidden hidden border-t border-white/5 bg-ink-950/95 backdrop-blur-md">
       <div class="px-4 py-4 flex flex-col gap-1 text-sm">
-        <a href="#status"    class="rounded-md px-3 py-2 text-zinc-300 hover:bg-white/5 hover:text-neon-cyan">Status</a>
         <a href="#templates" class="rounded-md px-3 py-2 text-zinc-300 hover:bg-white/5 hover:text-neon-cyan">Templates</a>
         <a href="#how"       class="rounded-md px-3 py-2 text-zinc-300 hover:bg-white/5 hover:text-neon-cyan">How it works</a>
         <a href="#orchestra" class="rounded-md px-3 py-2 text-zinc-300 hover:bg-white/5 hover:text-neon-cyan">Orchestra</a>
@@ -241,182 +238,6 @@
           </p>
         </div>
       </div>
-    </section>
-
-    <!-- ==========================================================
-         Live status — three stat cards. Numbers are illustrative
-         until the public metrics endpoint ships; the timestamp is
-         hydrated by JS in step 7 to read "Last refresh · just now".
-         ========================================================== -->
-    <section id="status" class="mx-auto max-w-7xl px-4 sm:px-6 py-16 sm:py-20 md:py-24">
-      <div class="flex items-end flex-wrap gap-3 mb-10">
-        <span class="relative inline-block h-2.5 w-2.5 rounded-full bg-neon-green live-dot mb-1"></span>
-        <h2 class="font-display text-3xl md:text-4xl font-bold tracking-tight">Live network status</h2>
-        <span class="ml-auto text-xs text-zinc-500 font-mono" data-last-refresh>last refresh · just now</span>
-      </div>
-
-      <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-
-        <!-- Active Agents -->
-        <article class="card relative rounded-2xl border border-white/10 bg-white/[0.02] p-6 overflow-hidden">
-          <div class="absolute inset-0 bg-gradient-to-br from-neon-cyan/[0.06] to-transparent pointer-events-none"></div>
-          <div class="relative">
-            <div class="flex items-center gap-2 text-zinc-400 text-sm">
-              <svg class="h-4 w-4 text-neon-cyan" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
-              Active Agents
-            </div>
-            <div class="mt-3 font-display text-5xl font-bold text-neon-cyan glow-cyan tabular-nums">1,284</div>
-            <div class="mt-2 flex items-center gap-2 text-xs text-zinc-500">
-              <span class="text-neon-green font-semibold">+47</span> this week
-              <span class="text-zinc-600">·</span>
-              <span>across 8 templates</span>
-            </div>
-            <!-- inline sparkline -->
-            <svg viewBox="0 0 120 32" class="mt-5 w-full h-8" aria-hidden="true">
-              <polyline fill="none" stroke="#00E5FF" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"
-                points="0,24 12,22 24,18 36,20 48,16 60,14 72,15 84,11 96,9 108,7 120,5"/>
-              <polyline fill="url(#g1)" stroke="none" points="0,24 12,22 24,18 36,20 48,16 60,14 72,15 84,11 96,9 108,7 120,5 120,32 0,32"/>
-              <defs>
-                <linearGradient id="g1" x1="0" x2="0" y1="0" y2="1">
-                  <stop offset="0%" stop-color="#00E5FF" stop-opacity="0.35"/>
-                  <stop offset="100%" stop-color="#00E5FF" stop-opacity="0"/>
-                </linearGradient>
-              </defs>
-            </svg>
-          </div>
-        </article>
-
-        <!-- Successful Deployments Today -->
-        <article class="card relative rounded-2xl border border-white/10 bg-white/[0.02] p-6 overflow-hidden">
-          <div class="absolute inset-0 bg-gradient-to-br from-neon-purple/[0.08] to-transparent pointer-events-none"></div>
-          <div class="relative">
-            <div class="flex items-center gap-2 text-zinc-400 text-sm">
-              <svg class="h-4 w-4 text-neon-purple2" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12l4 4L19 6"/></svg>
-              Successful Deployments — Today
-            </div>
-            <div class="mt-3 font-display text-5xl font-bold text-neon-purple2 glow-purple tabular-nums">312</div>
-            <div class="mt-2 flex items-center gap-2 text-xs text-zinc-500">
-              <span class="text-neon-green font-semibold">99.4%</span> dry-run → real success rate
-            </div>
-            <svg viewBox="0 0 120 32" class="mt-5 w-full h-8" aria-hidden="true">
-              <g>
-                <rect x="0"   y="20" width="6" height="12" rx="1.5" fill="#7C3AED" opacity="0.55"/>
-                <rect x="12"  y="14" width="6" height="18" rx="1.5" fill="#7C3AED" opacity="0.7"/>
-                <rect x="24"  y="18" width="6" height="14" rx="1.5" fill="#7C3AED" opacity="0.6"/>
-                <rect x="36"  y="10" width="6" height="22" rx="1.5" fill="#7C3AED" opacity="0.85"/>
-                <rect x="48"  y="16" width="6" height="16" rx="1.5" fill="#7C3AED" opacity="0.7"/>
-                <rect x="60"  y="8"  width="6" height="24" rx="1.5" fill="#9D4EDD"/>
-                <rect x="72"  y="12" width="6" height="20" rx="1.5" fill="#7C3AED" opacity="0.8"/>
-                <rect x="84"  y="6"  width="6" height="26" rx="1.5" fill="#9D4EDD"/>
-                <rect x="96"  y="14" width="6" height="18" rx="1.5" fill="#7C3AED" opacity="0.75"/>
-                <rect x="108" y="4"  width="6" height="28" rx="1.5" fill="#9D4EDD"/>
-              </g>
-            </svg>
-          </div>
-        </article>
-
-        <!-- Safety Blocks Prevented -->
-        <article class="card relative rounded-2xl border border-white/10 bg-white/[0.02] p-6 overflow-hidden">
-          <div class="absolute inset-0 bg-gradient-to-br from-neon-pink/[0.07] to-transparent pointer-events-none"></div>
-          <div class="relative">
-            <div class="flex items-center gap-2 text-zinc-400 text-sm">
-              <svg class="h-4 w-4 text-neon-pink" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l8 4v6c0 5-3.5 9-8 10-4.5-1-8-5-8-10V6l8-4z"/></svg>
-              Safety Blocks Prevented
-            </div>
-            <div class="mt-3 font-display text-5xl font-bold text-neon-pink glow-pink tabular-nums">47</div>
-            <div class="mt-2 flex items-center gap-2 text-xs text-zinc-500">
-              <span>this month</span>
-              <span class="text-zinc-600">·</span>
-              <span>fail-closed by default</span>
-            </div>
-            <!-- breakdown chips -->
-            <div class="mt-5 flex flex-wrap gap-1.5">
-              <span class="rounded-md border border-white/10 bg-white/5 px-2 py-0.5 text-[10px] text-zinc-300 font-mono">static · 28</span>
-              <span class="rounded-md border border-white/10 bg-white/5 px-2 py-0.5 text-[10px] text-zinc-300 font-mono">llm-audit · 16</span>
-              <span class="rounded-md border border-neon-purple/30 bg-neon-purple/10 px-2 py-0.5 text-[10px] text-neon-purple2 font-mono">lucas-veto · 3</span>
-            </div>
-          </div>
-        </article>
-
-      </div>
-
-      <!-- Safety Score gauge — animated SVG ring, score reveals on view. -->
-      <div class="mt-8 rounded-2xl border border-white/10 bg-gradient-to-br from-neon-green/[0.05] via-ink-900/60 to-transparent p-6 md:p-8">
-        <div class="grid grid-cols-1 md:grid-cols-12 gap-6 items-center">
-
-          <div class="md:col-span-4 flex justify-center">
-            <div class="relative w-48 h-48">
-              <svg viewBox="0 0 200 200" class="w-full h-full -rotate-90">
-                <!-- track -->
-                <circle cx="100" cy="100" r="86" fill="none" stroke="rgba(255,255,255,0.06)" stroke-width="14"/>
-                <!-- arc — stroke-dasharray = circumference (~540.35); offset reveals 99.7% -->
-                <circle data-safety-arc cx="100" cy="100" r="86" fill="none"
-                        stroke="url(#safetyGrad)" stroke-width="14" stroke-linecap="round"
-                        stroke-dasharray="540.35" stroke-dashoffset="540.35"
-                        style="transition: stroke-dashoffset 1.6s cubic-bezier(.16,.84,.32,1);"/>
-                <defs>
-                  <linearGradient id="safetyGrad" x1="0" y1="0" x2="1" y2="1">
-                    <stop offset="0%"   stop-color="#27C93F"/>
-                    <stop offset="100%" stop-color="#00E5FF"/>
-                  </linearGradient>
-                </defs>
-              </svg>
-              <div class="absolute inset-0 flex flex-col items-center justify-center">
-                <div class="font-display font-bold text-4xl text-neon-green glow-cyan tabular-nums">
-                  <span data-safety-pct>0.0</span>%
-                </div>
-                <div class="text-[10px] uppercase tracking-wider text-zinc-500 font-mono mt-1">safety pass rate</div>
-              </div>
-            </div>
-          </div>
-
-          <div class="md:col-span-8">
-            <div class="flex items-center gap-2">
-              <span class="rounded-full bg-neon-green/10 border border-neon-green/30 text-neon-green text-[10px] font-mono uppercase tracking-wider px-2 py-0.5">99.7%</span>
-              <h3 class="font-display text-xl font-bold">Safety Score</h3>
-            </div>
-            <p class="mt-2 text-sm text-zinc-400 leading-relaxed max-w-xl">
-              Pass rate across all bridge runs in the last 30 days. Failures are not bugs — they are the audit doing its job and refusing to ship unsafe code.
-            </p>
-            <div class="mt-5 grid grid-cols-3 gap-3 text-center">
-              <div class="rounded-lg border border-white/10 bg-white/[0.02] py-3">
-                <div class="text-2xl font-display font-bold text-neon-green tabular-nums">15,623</div>
-                <div class="text-[10px] uppercase tracking-wider text-zinc-500 font-mono mt-1">runs · 30d</div>
-              </div>
-              <div class="rounded-lg border border-white/10 bg-white/[0.02] py-3">
-                <div class="text-2xl font-display font-bold text-neon-cyan tabular-nums">15,576</div>
-                <div class="text-[10px] uppercase tracking-wider text-zinc-500 font-mono mt-1">passed</div>
-              </div>
-              <div class="rounded-lg border border-white/10 bg-white/[0.02] py-3">
-                <div class="text-2xl font-display font-bold text-neon-pink tabular-nums">47</div>
-                <div class="text-[10px] uppercase tracking-wider text-zinc-500 font-mono mt-1">blocked</div>
-              </div>
-            </div>
-          </div>
-
-        </div>
-      </div>
-
-      <!-- Live Deployments feed — JS prepends new entries on a timer. -->
-      <div class="mt-8 rounded-2xl border border-white/10 bg-ink-900/60 overflow-hidden">
-        <div class="flex items-center justify-between px-5 py-3 border-b border-white/5 bg-ink-850/60">
-          <div class="flex items-center gap-2">
-            <span class="relative inline-block h-2 w-2 rounded-full bg-neon-green live-dot"></span>
-            <span class="font-display font-semibold text-sm">Live deployments</span>
-          </div>
-          <span class="text-[10px] uppercase tracking-wider text-zinc-500 font-mono">streaming</span>
-        </div>
-        <ul data-deploy-feed class="divide-y divide-white/5 max-h-72 overflow-hidden">
-          <!-- entries injected by JS; an initial set is rendered for no-JS users below -->
-          <noscript>
-            <li class="px-5 py-3 text-xs text-zinc-500 font-mono">enable JavaScript to see streaming deployments</li>
-          </noscript>
-        </ul>
-      </div>
-
-      <p class="mt-6 text-xs text-zinc-500 font-mono">
-        Numbers are illustrative for the v0.1.0 launch; a public metrics endpoint ships in v0.3.0 (see <a class="underline decoration-dotted hover:text-neon-cyan" href="https://github.com/AgentMindCloud/grok-build-bridge/blob/main/ROADMAP.md">ROADMAP</a>).
-      </p>
     </section>
 
     <!-- ==========================================================
@@ -870,10 +691,8 @@ safety:
           class="pointer-events-none fixed inset-0 w-full h-full z-50"></canvas>
 
   <!-- ============================================================
-       Minimal vanilla JS:
-         1. Carousel prev/next buttons (no dependency).
-         2. Relative "last refresh" timestamp.
-       Both are progressive enhancements — the page works without JS.
+       Minimal vanilla JS — progressive enhancements; the page works
+       without it.
        ============================================================ -->
   <script>
     // --- Templates carousel ----------------------------------------------
@@ -987,21 +806,6 @@ safety:
           setTimeout(() => {
             label.textContent = 'Deployed ✓';
             burst();
-            // Also drop a celebratory entry into the live deploy feed (if present).
-            const feed = document.querySelector('[data-deploy-feed]');
-            if (feed) {
-              const li = document.createElement('li');
-              li.className = 'px-5 py-3 flex items-center gap-3 text-sm transform -translate-y-2 opacity-0 transition-all duration-500 bg-neon-green/[0.04]';
-              li.innerHTML = `
-                <span class="inline-flex items-center justify-center h-6 w-6 rounded-md bg-neon-green/20 text-neon-green border border-neon-green/40 text-[11px]">✓</span>
-                <span class="font-mono text-neon-green text-xs">truthseeker-daily</span>
-                <span class="text-zinc-500 text-xs hidden sm:inline">→</span>
-                <span class="font-mono text-zinc-300 text-xs hidden sm:inline">@you (simulated)</span>
-                <span class="ml-auto text-[10px] font-mono text-neon-green">just now</span>`;
-              feed.prepend(li);
-              requestAnimationFrame(() => li.classList.remove('-translate-y-2', 'opacity-0'));
-              while (feed.children.length > 6) feed.lastElementChild.remove();
-            }
           }, 800);
           setTimeout(() => {
             label.textContent = original;
@@ -1046,142 +850,6 @@ safety:
           }, 1800);
         });
       });
-    })();
-
-    // --- Live Deployments feed — fake stream of recent deploys ----------
-    (function () {
-      const feed = document.querySelector('[data-deploy-feed]');
-      if (!feed) return;
-
-      const TEMPLATES = [
-        { slug: 'truthseeker-daily',     color: 'pink'   },
-        { slug: 'research-thread-weekly',color: 'cyan'   },
-        { slug: 'x-trend-analyzer',      color: 'purple2'},
-        { slug: 'code-explainer-bot',    color: 'cyan3'  },
-        { slug: 'hello-bot',             color: 'green'  },
-        { slug: 'grok-build-coding-agent', color: 'purple' },
-      ];
-      const REGIONS = ['us-east-1', 'eu-west-1', 'us-west-2', 'ap-south-1', 'eu-central-1', 'sa-east-1'];
-      const HANDLES = ['@nora', '@kenji', '@priya', '@diego', '@yuki', '@amara', '@finn', '@selma', '@marco', '@isla'];
-
-      const COLOR_MAP = {
-        cyan:    'text-neon-cyan',
-        cyan2:   'text-neon-cyan2',
-        cyan3:   'text-neon-cyan3',
-        purple:  'text-neon-purple',
-        purple2: 'text-neon-purple2',
-        pink:    'text-neon-pink',
-        green:   'text-neon-green',
-      };
-
-      const MAX_VISIBLE = 6;
-      let counter = 0;
-
-      const ago = (s) => s < 60 ? `${s}s ago` : `${Math.floor(s/60)}m ago`;
-
-      const makeEntry = () => {
-        const tpl = TEMPLATES[Math.floor(Math.random() * TEMPLATES.length)];
-        const region = REGIONS[Math.floor(Math.random() * REGIONS.length)];
-        const handle = HANDLES[Math.floor(Math.random() * HANDLES.length)];
-        const tokens = (10 + Math.floor(Math.random() * 25));
-        const dur = (28 + Math.random() * 20).toFixed(1);
-        const id = ++counter;
-
-        const li = document.createElement('li');
-        li.className = 'px-5 py-3 flex items-center gap-3 text-sm transform -translate-y-2 opacity-0 transition-all duration-500';
-        li.dataset.born = String(Date.now());
-        li.innerHTML = `
-          <span class="inline-flex items-center justify-center h-6 w-6 rounded-md bg-neon-green/15 text-neon-green border border-neon-green/30 text-[11px]">✓</span>
-          <span class="font-mono ${COLOR_MAP[tpl.color]} text-xs">${tpl.slug}</span>
-          <span class="text-zinc-500 text-xs hidden sm:inline">→</span>
-          <span class="font-mono text-zinc-300 text-xs hidden sm:inline">${handle}</span>
-          <span class="ml-auto flex items-center gap-3 text-[10px] font-mono text-zinc-500">
-            <span class="hidden md:inline">${region}</span>
-            <span>${tokens}k tok</span>
-            <span class="text-neon-green">${dur}s</span>
-            <span data-age data-born="${Date.now()}" class="w-14 text-right">just now</span>
-          </span>`;
-        return li;
-      };
-
-      const seedAndAnimate = () => {
-        const li = makeEntry();
-        feed.prepend(li);
-        // Force layout, then transition in.
-        requestAnimationFrame(() => {
-          li.classList.remove('-translate-y-2', 'opacity-0');
-        });
-        // Cap visible entries.
-        while (feed.children.length > MAX_VISIBLE) {
-          const last = feed.lastElementChild;
-          last.classList.add('opacity-0');
-          setTimeout(() => last.remove(), 400);
-        }
-      };
-
-      // Seed the feed with a few backdated entries so it looks alive immediately.
-      for (let i = 0; i < 4; i++) seedAndAnimate();
-
-      // Tick the per-row "ago" display every 3s.
-      setInterval(() => {
-        feed.querySelectorAll('[data-age]').forEach(el => {
-          const s = Math.max(0, Math.floor((Date.now() - Number(el.dataset.born)) / 1000));
-          el.textContent = ago(s);
-        });
-      }, 3000);
-
-      // Keep streaming new entries at randomised intervals (3–7s).
-      const stream = () => {
-        seedAndAnimate();
-        setTimeout(stream, 3000 + Math.random() * 4000);
-      };
-      setTimeout(stream, 2500);
-    })();
-
-    // --- Safety Score gauge — arc fills + percentage counts on view -----
-    (function () {
-      const arc = document.querySelector('[data-safety-arc]');
-      const pct = document.querySelector('[data-safety-pct]');
-      if (!arc || !pct) return;
-      const TARGET = 99.7;
-      const C = 540.35; // 2 * PI * r where r=86
-      const reveal = () => {
-        // arc: 99.7% of the circumference revealed
-        arc.style.strokeDashoffset = String(C * (1 - TARGET / 100));
-        // count up
-        const start = performance.now();
-        const dur = 1600;
-        const tick = (now) => {
-          const t = Math.min(1, (now - start) / dur);
-          const eased = 1 - Math.pow(1 - t, 3);
-          pct.textContent = (TARGET * eased).toFixed(1);
-          if (t < 1) requestAnimationFrame(tick);
-        };
-        requestAnimationFrame(tick);
-      };
-      const io = new IntersectionObserver((entries, obs) => {
-        if (entries.some(e => e.isIntersecting)) { reveal(); obs.disconnect(); }
-      }, { threshold: 0.4 });
-      io.observe(arc);
-    })();
-
-    // --- Relative "last refresh" timestamp -------------------------------
-    (function () {
-      const el = document.querySelector('[data-last-refresh]');
-      if (!el) return;
-      const start = Date.now();
-      const fmt = (s) => {
-        if (s < 10)   return 'just now';
-        if (s < 60)   return `${s}s ago`;
-        if (s < 3600) return `${Math.floor(s / 60)}m ago`;
-        return `${Math.floor(s / 3600)}h ago`;
-      };
-      const tick = () => {
-        const s = Math.floor((Date.now() - start) / 1000);
-        el.textContent = `last refresh · ${fmt(s)}`;
-      };
-      tick();
-      setInterval(tick, 5000);
     })();
   </script>
 
